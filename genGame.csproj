@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    
+	<AssemblyName>genGame</AssemblyName>
+    <Version>1.0.0</Version>
+    <Authors>siljam</Authors>
+    <Company>AshProject</Company>
+	
+	<ApplicationIcon>res/icon.ico</ApplicationIcon>
+	
+	<PublishSingleFile>true</PublishSingleFile>
+	<IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+  </PropertyGroup>
+
+  <ItemGroup>
+	<EmbeddedResource Include="res/*" />
+	<EmbeddedResource Include="res/textures/*" />
+	<EmbeddedResource Include="shaders/*" />
+	
+    <PackageReference Include="AshLib" Version="3.4.0" />
+    <PackageReference Include="OpenTK" Version="4.9.4" />
+    <PackageReference Include="StbImageSharp" Version="2.30.15" />
+    <PackageReference Include="System.Drawing.Common" Version="9.0.0" />
+  </ItemGroup>
+  
+</Project>
