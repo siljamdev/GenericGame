@@ -1,7 +1,7 @@
 # Generic game Template
 <img src="res/icon.png" width="200"/>
 
-Template that makes it easy to create games with [OpenTK](https://github.com/opentk/opentk). Comes with user interfaces, a free caera, basic menus, options and customizable controls.
+Template that makes it easy to create games with [OpenTK](https://github.com/opentk/opentk). Comes with user interfaces, a free camera, basic menus, options and customizable controls.
 
 Everybody is free to use this as a template for their game or in any other way.
 
