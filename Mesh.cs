@@ -3,7 +3,7 @@ using OpenTK;
 using OpenTK.Graphics.OpenGL;
 using OpenTK.Mathematics;
 
-public class Mesh{
+public class Mesh : IDisposable{
 	
 	static int boundVBO;
 	static int boundVAO;
@@ -148,6 +148,7 @@ public class Mesh{
 		GL.BindVertexArray(0); //Unbind VAO
 		GL.DeleteBuffer((int) VBO); //Delete VBO, we wont even need it anymore. If we delete before unbinding the VAO, it will unbind or something idk just dont do it
 		VBO = null;
+		GL.DeleteBuffer(EBO); //Delete EBO, we wont need it anymore
 		
 		boundVBO = 0;
 		boundVAO = 0;
@@ -207,5 +208,29 @@ public class Mesh{
 		}else{
 			GL.DrawArraysInstanced(drawType, 0, numberOfVertices, numberOfInstances);
 		}
+	}
+	
+	public void Dispose(){
+		if(boundVAO == VAO){
+			boundVAO = 0;
+		}
+		
+		GL.DeleteVertexArray(VAO);
+		VAO = 0;
+		
+		if(VBO != null){
+			if(boundVBO == VBO){
+				boundVBO = 0;
+			}
+			
+			GL.DeleteBuffer((int) VBO);
+			VBO = null;
+		}
+		
+		GC.SuppressFinalize(this);
+	}
+	
+	~Mesh(){
+		Dispose();
 	}
 }

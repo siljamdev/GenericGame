@@ -85,19 +85,19 @@ class Renderer{
 		uiMesh = new Mesh("2", vertices, PrimitiveType.Triangles);
 		
 		book = new Dictionary<string, Texture2D>();
-		uiShader = Shader.generateFromAssembly("shaders.ui");
-		rectShader = Shader.generateFromAssembly("shaders.rect");
+		uiShader = Shader.fromAssembly("shaders.ui");
+		rectShader = Shader.fromAssembly("shaders.rect");
 		
-		fr = new FontRenderer(uiMesh, Texture2D.generateFromAssembly("res.textures.font.png", TextureParams.Default), 16, 16);
+		fr = new FontRenderer(uiMesh, Texture2D.fromAssembly("res.textures.font.png", TextureParams.Default), 16, 16);
 		
 		//load textures
-		addTexture("tick", Texture2D.generateFromAssembly("res.textures.tick.png", TextureParams.Default));
-		addTexture("screenshot", Texture2D.generateFromAssembly("res.textures.screenshotButton.png", TextureParams.Default));
-		addTexture("next", Texture2D.generateFromAssembly("res.textures.nextButton.png", TextureParams.Default));
-		addTexture("previous", Texture2D.generateFromAssembly("res.textures.previousButton.png", TextureParams.Default));
-		addTexture("icon", Texture2D.generateFromAssembly("res.icon.png", TextureParams.Default));
-		addTexture("info", Texture2D.generateFromAssembly("res.textures.infoIcon.png", TextureParams.Default));
-		addTexture("help", Texture2D.generateFromAssembly("res.textures.helpIcon.png", TextureParams.Default));
+		addTexture("tick", Texture2D.fromAssembly("res.textures.tick.png", TextureParams.Default));
+		addTexture("screenshot", Texture2D.fromAssembly("res.textures.screenshotButton.png", TextureParams.Default));
+		addTexture("next", Texture2D.fromAssembly("res.textures.nextButton.png", TextureParams.Default));
+		addTexture("previous", Texture2D.fromAssembly("res.textures.previousButton.png", TextureParams.Default));
+		addTexture("icon", Texture2D.fromAssembly("res.icon.png", TextureParams.Default));
+		addTexture("info", Texture2D.fromAssembly("res.textures.infoIcon.png", TextureParams.Default));
+		addTexture("help", Texture2D.fromAssembly("res.textures.helpIcon.png", TextureParams.Default));
 		
 		overlayScreen = new UiScreen(
 			new UiImage(Placement.TopLeft, 0f, 0f, 30, 30, "icon", Color3.White)

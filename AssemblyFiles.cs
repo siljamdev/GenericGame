@@ -8,7 +8,7 @@ static class AssemblyFiles{
 	
 	const string assemblyName = "genGame";
 	
-	public static byte[] get(string name){
+	public static byte[] getBytes(string name){
 		byte[] b;
 		
 		string resourceName = resourceNames.FirstOrDefault(str => str == assemblyName + "." + name);
@@ -24,6 +24,16 @@ static class AssemblyFiles{
 		}
 		
 		return b;
+	}
+	
+	public static Stream getStream(string name){
+		string resourceName = resourceNames.FirstOrDefault(str => str == assemblyName + "." + name);
+		
+		if(resourceName == null){
+			throw new Exception("No resource found called " + name);
+		}
+		
+		return assembly.GetManifestResourceStream(resourceName);
 	}
 	
 	public static string getText(string name){

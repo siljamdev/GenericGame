@@ -22,7 +22,7 @@ class FontRenderer{
 	
 	Shader fontShader;
 	
-	public FontRenderer(Mesh m, Texture2D t, int row, int col, string r = "ABCDEFGHIJKLMNOPQRSTUVWXYZ .,:+-*/\\'\"$()[]^?!%~º1234567890 |□#<>abcdefghijklmnopqrstuvwxyz ;&@`_{}Ññ"){
+	public FontRenderer(Mesh m, Texture2D t, int row, int col, string r = "ABCDEFGHIJKLMNOPQRSTUVWXYZ .,:+-*/\\'\"$()[]^?!%~º1234567890 |□#<>abcdefghijklmnopqrstuvwxyz ;&@`_{}Ññ=€¿¡"){
 		glyphRows = row;
 		glyphColumns = col;
 		font = t;
@@ -30,7 +30,7 @@ class FontRenderer{
 		generateMap();
 		fontMesh = m;
 		
-		fontShader = Shader.generateFromAssembly("shaders.font");
+		fontShader = Shader.fromAssembly("shaders.font");
 		
 		fontShader.setVector2i("glyphStructure", new Vector2i(this.glyphRows, this.glyphColumns)); //Pass the number of rows and cols
 	}

@@ -1,8 +1,8 @@
 using System;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Drawing;
 using System.Drawing.Imaging;
-using System.Reflection;
 using System.IO;
 using OpenTK;
 using OpenTK.Windowing.Desktop;
@@ -49,6 +49,11 @@ partial class GenericGame : GameWindow{
 	
 	public Scene sce;
 	
+	public SoundManager sm;
+	
+	Sound testSound;
+	Sound testSound2;
+	
 	public static DeltaHelper dh;
 	
 	bool isFullscreened;
@@ -56,6 +61,12 @@ partial class GenericGame : GameWindow{
 	float maxFps = 144f;
 	
 	static void Main(string[] args){
+		if(OperatingSystem.IsWindows()){
+			if(GetConsoleWindow() == IntPtr.Zero){
+				AttachConsole(ATTACH_PARENT_PROCESS);
+			}
+		}
+		
 		using(GenericGame genGame = new GenericGame()){
 			genGame.Run();
 		}
@@ -80,6 +91,10 @@ partial class GenericGame : GameWindow{
 		initializeConfig();
 		
 		ren = new Renderer(this);
+		sm = new SoundManager();
+		
+		testSound = Sound.monoFromAssembly("res.sounds.goofy.ogg");
+		testSound2 = Sound.monoFromAssembly("res.sounds.gnome.ogg");
 		
 		Scene.initialize();
 		
@@ -159,6 +174,12 @@ partial class GenericGame : GameWindow{
 				ren.closeScreen();
 			}else{
 				ren.setScreen(pauseMenu);
+				
+				//Delete this please
+				Random rnd = new();
+				Vector3 c = new Vector3((float)(rnd.NextDouble() * 2.0 - 1.0), (float)(rnd.NextDouble() * 2.0 - 1.0), (float)(rnd.NextDouble() * 2.0 - 1.0));
+				c.Normalize();
+				sm.play(testSound2, c);
 			}
 			
 			break;
@@ -183,6 +204,9 @@ partial class GenericGame : GameWindow{
 		
 		if(advancedMode.isActive(KeyboardState)){
 			ren.toggleAdvancedMode();
+			
+			//Delete this too
+			sm.play(testSound);
 		}
 		
 		if(ren.currentScreen != null){			
@@ -250,6 +274,7 @@ partial class GenericGame : GameWindow{
 			
             errorCode = GL.GetError();
         }
+		sm.checkErrors();
 	}
 	
 	void captureScreenshot(){
@@ -287,11 +312,11 @@ partial class GenericGame : GameWindow{
 	}
 	
 	void setIcon(){
-		byte[] imageBytes = AssemblyFiles.get("res.icon.png");
+		using Stream s = AssemblyFiles.getStream("res.icon.png");
 		
 		//Generate the image and put it as icon
-		ImageResult image = ImageResult.FromMemory(imageBytes, ColorComponents.RedGreenBlueAlpha);
-		if (image == null || image.Data == null){
+		ImageResult image = ImageResult.FromStream(s, ColorComponents.RedGreenBlueAlpha);
+		if(image == null || image.Data == null){
 			return;
 		}
 		
@@ -387,4 +412,16 @@ partial class GenericGame : GameWindow{
 		
 		base.OnMouseDown(e);
     }
+	
+	#region WINDOWS
+		[DllImport("user32.dll", CharSet = CharSet.Unicode)]
+		private static extern int MessageBox(IntPtr hWnd, string text, string caption, uint type);
+		
+		[DllImport("kernel32.dll")]
+		static extern bool AttachConsole(int dwProcessId);
+		const int ATTACH_PARENT_PROCESS = -1;
+		
+		[DllImport("kernel32.dll")]
+		static extern IntPtr GetConsoleWindow();
+	#endregion
 }

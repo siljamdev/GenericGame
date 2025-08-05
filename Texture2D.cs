@@ -4,7 +4,7 @@ using OpenTK.Graphics.OpenGL;
 using OpenTK.Mathematics;
 using StbImageSharp;
 
-public class Texture2D{
+public class Texture2D : IDisposable{
 	
 	static int[] activeTexture = new int[8];
 	
@@ -54,32 +54,41 @@ public class Texture2D{
 		activeTexture[_unit] = 0;
 	}
 	
-	public static Texture2D generateFromFile(string path, TextureParams tp){
-		ImageResult image = ImageResult.FromMemory(File.ReadAllBytes(path), ConvertFormat(tp.imageFormat));
+	//Disposes of the stream
+	public static Texture2D fromStream(Stream s, TextureParams tp){
+		ImageResult image = ImageResult.FromStream(s, ConvertFormat(tp.imageFormat));
 		if (image == null || image.Data == null){
-			throw new Exception("Image loading failed from:" + path);
+			throw new Exception("Image loading failed from stream");
 		}
 		Texture2D t = new Texture2D(image, tp);
 		return t;
 	}
 	
-	public static Texture2D generateFromBytes(byte[] data, TextureParams tp){
+	public static Texture2D fromFile(string path, TextureParams tp){
+		using FileStream fs = File.OpenRead(path);
+		try{
+			return fromStream(fs, tp);
+		}catch(Exception e){
+			throw new Exception("Image loading failed from file: " + path, e);
+		}
+	}
+	
+	public static Texture2D fromBytes(byte[] data, TextureParams tp){
 		ImageResult image = ImageResult.FromMemory(data, ConvertFormat(tp.imageFormat));
 		if (image == null || image.Data == null){
-			throw new Exception("Image loading failed byte array");
+			throw new Exception("Image loading failed from byte array");
 		}
 		Texture2D t = new Texture2D(image, tp);
 		return t;
 	}
 	
-	public static Texture2D generateFromAssembly(string name, TextureParams tp){
-		byte[] data = AssemblyFiles.get(name);
-		ImageResult image = ImageResult.FromMemory(data, ConvertFormat(tp.imageFormat));
-		if (image == null || image.Data == null){
-			throw new Exception("Image loading failed byte array");
+	public static Texture2D fromAssembly(string name, TextureParams tp){
+		using Stream s = AssemblyFiles.getStream(name);
+		try{
+			return fromStream(s, tp);
+		}catch(Exception e){
+			throw new Exception("Image loading failed from assembly: " + name, e);
 		}
-		Texture2D t = new Texture2D(image, tp);
-		return t;
 	}
 	
 	static ColorComponents ConvertFormat(PixelFormat pixelFormat){
@@ -138,6 +147,18 @@ public class Texture2D{
 			default:
 			return TextureUnit.Texture0;
 		}
+	}
+	
+	public void Dispose(){
+		if(activeTexture[_unit] == this.id){
+			activeTexture[_unit] = 0;
+		}
+		GL.DeleteTexture(this.id);
+		GC.SuppressFinalize(this);
+	}
+	
+	~Texture2D(){
+		Dispose();
 	}
 }
 

@@ -13,7 +13,7 @@ class KeyBind{
 	public Keys key{get; set;}
 	Keys modifier;
 	
-	public KeyBind(Keys k, bool s){
+	public KeyBind(Keys k, bool s = false){
 		key = k;
 		sticky = s;
 	}

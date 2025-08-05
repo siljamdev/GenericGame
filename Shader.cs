@@ -5,7 +5,7 @@ using OpenTK.Mathematics;
 using OpenTK.Windowing.GraphicsLibraryFramework;
 using AshLib;
 
-public class Shader{
+public class Shader : IDisposable{
 	
 	static int activeShader;
 	
@@ -61,7 +61,7 @@ public class Shader{
 		
 		if(linkStatus == (int)All.False){
 			string log = GL.GetProgramInfoLog(this.id);
-			Console.Error.WriteLine("GLSL SHADER LINKING ERROR:\n" + log);
+			throw new Exception("GLSL SHADER LINKING ERROR:\n" + log);
 		}
 		
 		GL.ValidateProgram(this.id);
@@ -71,7 +71,7 @@ public class Shader{
 		
 		if(validateStatus == (int)All.False){
 			string log = GL.GetProgramInfoLog(this.id);
-			Console.Error.WriteLine("GLSL SHADER VALIDATING ERROR:\n" + log);
+			throw new Exception("GLSL SHADER VALIDATING ERROR:\n" + log);
 		}
 		
 		GL.DetachShader(this.id, vertexShader);
@@ -99,7 +99,7 @@ public class Shader{
 		}
 	}
 	
-	public static Shader generateFromAssembly(string name){
+	public static Shader fromAssembly(string name){
 		string v = AssemblyFiles.getText(name + "Vertex.glsl");
 		string f = AssemblyFiles.getText(name + "Fragment.glsl");
 		string g = null;
@@ -135,12 +135,37 @@ public class Shader{
 	
 	public void setIntArray(string name, int[] data){
 		this.use();
-		GL.Uniform1(uniforms[name], data.Length, data);
+		if(!name.EndsWith("[0]")){
+			GL.Uniform1(uniforms[name], data.Length, data);
+		}else{
+			GL.Uniform1(GL.GetUniformLocation(this.id, name), data.Length, data);
+		}
+	}
+	
+	//Set one of the elements
+	public void setIntArrayMember(string name, int index, int data){
+		this.use();
+		GL.Uniform1(GL.GetUniformLocation(this.id, name + "[" + index + "]"), data);
 	}
 	
 	public void setFloat(string name, float data){
 		this.use();
 		GL.Uniform1(uniforms[name], data);
+	}
+	
+	public void setFloatArray(string name, float[] data){
+		this.use();
+		if(!name.EndsWith("[0]")){
+			GL.Uniform1(uniforms[name], data.Length, data);
+		}else{
+			GL.Uniform1(GL.GetUniformLocation(this.id, name), data.Length, data);
+		}
+	}
+	
+	//Set one of the elements
+	public void setFloatArrayMember(string name, int index, float data){
+		this.use();
+		GL.Uniform1(GL.GetUniformLocation(this.id, name + "[" + index + "]"), data);
 	}
 	
 	public void setMatrix4(string name, Matrix4 data){
@@ -176,5 +201,17 @@ public class Shader{
 	public void setVector2i(string name, Vector2i data){
 		this.use();
 		GL.Uniform2(uniforms[name], data.X, data.Y);
+	}
+	
+	public void Dispose(){
+		if(activeShader == this.id){
+			activeShader = 0;
+		}
+		GL.DeleteProgram(this.id);
+		GC.SuppressFinalize(this);
+	}
+	
+	~Shader(){
+		Dispose();
 	}
 }

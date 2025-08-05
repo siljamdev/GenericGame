@@ -15,7 +15,7 @@ class Scene{
 	public Scene(Renderer ren){
 		cam = ren.cam;
 		
-		texture = Texture2D.generateFromAssembly("res.textures.sce.png", TextureParams.Default);
+		texture = Texture2D.fromAssembly("res.textures.sce.png", TextureParams.Default);
 		
 		cam.onViewChange += setView;
 		
@@ -25,7 +25,7 @@ class Scene{
 	}
 	
 	public static void initialize(){
-		sceneShader = Shader.generateFromAssembly("shaders.scene");
+		sceneShader = Shader.fromAssembly("shaders.scene");
 		
 		float[] vertices = {
 			1f, -1f,
