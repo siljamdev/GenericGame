@@ -1,8 +1,6 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Drawing;
-using System.Drawing.Imaging;
 using System.IO;
 using OpenTK;
 using OpenTK.Windowing.Desktop;
@@ -12,6 +10,7 @@ using OpenTK.Mathematics;
 using OpenTK.Windowing.GraphicsLibraryFramework;
 using OpenTK.Windowing.Common.Input;
 using StbImageSharp;
+using StbImageWriteSharp;
 using AshLib;
 using AshLib.Time;
 using AshLib.Folders;
@@ -288,26 +287,21 @@ partial class GenericGame : GameWindow{
 		GL.ReadBuffer(ReadBufferMode.Front);
 		GL.ReadPixels(0, 0, width, height, OpenTK.Graphics.OpenGL.PixelFormat.Bgr, PixelType.UnsignedByte, pixels);
 		
-		// Create a new byte array to hold the RGB data (ignore alpha channel)
 		byte[] rgbPixels = new byte[width * height * 3]; // RGB (3 bytes per pixel)
 		
 		// Copy only RGB values
 		for(int i = 0; i < height; i++){
 			for(int j = 0; j < width; j++){
-				rgbPixels[((height - i - 1) * width + j) * 3] = pixels[(i * width + j) *3];      // Red
+				rgbPixels[((height - i - 1) * width + j) * 3] = pixels[(i * width + j) *3 + 2];      // Blue
 				rgbPixels[((height - i - 1) * width + j) * 3 + 1] = pixels[(i * width + j) * 3 + 1];  // Green
-				rgbPixels[((height - i - 1) * width + j) * 3 + 2] = pixels[(i * width + j) * 3 + 2];  // Blue
+				rgbPixels[((height - i - 1) * width + j) * 3 + 2] = pixels[(i * width + j) * 3];  // Red
 			}
 		}
 		
-		// Create a Bitmap and write the RGB pixel data into it
-		using(Bitmap bitmap = new Bitmap(width, height, System.Drawing.Imaging.PixelFormat.Format24bppRgb)){
-			BitmapData data = bitmap.LockBits(new System.Drawing.Rectangle(0, 0, width, height), ImageLockMode.WriteOnly, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
-			System.Runtime.InteropServices.Marshal.Copy(rgbPixels, 0, data.Scan0, rgbPixels.Length);
-			bitmap.UnlockBits(data);
-	
-			// Save the image (or copy to clipboard if needed)
-			bitmap.Save(dep.path + "/screenshots/" + DateTime.Now.ToString("dd-MM-yyyy_HH-mm-ss") + ".png", ImageFormat.Png);
+		// Write PNG using StbImageWriteSharp
+		var writer = new StbImageWriteSharp.ImageWriter();
+		using (var stream = File.OpenWrite(dep.path + "/screenshots/" + DateTime.Now.ToString("dd-MM-yyyy_HH-mm-ss") + ".png")){
+			writer.WritePng(rgbPixels, width, height, StbImageWriteSharp.ColorComponents.RedGreenBlue, stream);
 		}
 	}
 	
@@ -315,7 +309,7 @@ partial class GenericGame : GameWindow{
 		using Stream s = AssemblyFiles.getStream("res.icon.png");
 		
 		//Generate the image and put it as icon
-		ImageResult image = ImageResult.FromStream(s, ColorComponents.RedGreenBlueAlpha);
+		ImageResult image = ImageResult.FromStream(s, StbImageSharp.ColorComponents.RedGreenBlueAlpha);
 		if(image == null || image.Data == null){
 			return;
 		}
