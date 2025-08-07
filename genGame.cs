@@ -39,6 +39,8 @@ partial class GenericGame : GameWindow{
 	KeyBind logUp = new KeyBind(Keys.Up, true);
 	KeyBind logDown = new KeyBind(Keys.Down, true);
 	
+	public static List<(int, int?)> meshesMarkedForDisposal = new(); //Need to dispose of these on the same thread or else a Fatal error will occur
+	
 	public Dependencies dep;
 	public AshFile config;
 	
@@ -244,6 +246,7 @@ partial class GenericGame : GameWindow{
 	
 	void closeScene(){
 		sce = null;
+		ren.setScreen(null);
 		ren.setScreen(mainMenu);
 		ren.cam.reset();
 	}
@@ -274,6 +277,17 @@ partial class GenericGame : GameWindow{
             errorCode = GL.GetError();
         }
 		sm.checkErrors();
+	}
+	
+	void disposeOfMeshes(){
+		foreach((int VAO, int? VBO) in meshesMarkedForDisposal){		
+			GL.DeleteVertexArray(VAO);
+			
+			if(VBO != null){				
+				GL.DeleteBuffer((int) VBO);
+			}
+		}
+		meshesMarkedForDisposal.Clear();
 	}
 	
 	void captureScreenshot(){
@@ -346,6 +360,11 @@ partial class GenericGame : GameWindow{
 		base.OnLoad();
 	}
 	
+	protected override void OnUnload(){
+		disposeOfMeshes();
+		base.OnUnload();
+	}
+	
 	protected override void OnResize(ResizeEventArgs args){
 		onResize(args.Width, args.Height);
 		base.OnResize(args);
@@ -360,6 +379,7 @@ partial class GenericGame : GameWindow{
 		ren.draw();
 		Context.SwapBuffers();
 		checkErrors();
+		disposeOfMeshes();
 		if(takeScreenshotNextTick){
 			captureScreenshot();
 			ren.setCornerInfo("Saved screenshot");

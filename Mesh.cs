@@ -211,19 +211,20 @@ public class Mesh : IDisposable{
 	}
 	
 	public void Dispose(){
+		GenericGame.meshesMarkedForDisposal.Add((VAO, VBO));
 		if(boundVAO == VAO){
+			unbind();
 			boundVAO = 0;
 		}
 		
-		GL.DeleteVertexArray(VAO);
 		VAO = 0;
 		
 		if(VBO != null){
 			if(boundVBO == VBO){
+				unbindVBO();
 				boundVBO = 0;
 			}
 			
-			GL.DeleteBuffer((int) VBO);
 			VBO = null;
 		}
 		
