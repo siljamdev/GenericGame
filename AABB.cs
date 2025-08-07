@@ -1,9 +1,30 @@
 using System;
 using OpenTK;
 using OpenTK.Mathematics;
+using OpenTK.Graphics.OpenGL;
 using AshLib;
 
 class AABB{
+	static Shader boxShader;
+	static Mesh boxMesh;
+	
+	public static void initialize(){
+		boxShader = Shader.fromAssembly("shaders.AABB");
+		boxShader.setVector3("color", Color3.Red);
+		
+		float[] vertices = {
+			0.5f, -0.5f,
+			-0.5f, -0.5f,
+			//0.5f, 0.5f,
+			-0.5f, 0.5f,
+			0.5f, 0.5f,
+			0.5f, -0.5f,
+			//-0.5f, -0.5f,
+		};
+		
+		boxMesh = new Mesh("2", vertices, PrimitiveType.LineStrip);
+	}
+	
 	public double up{get; private set;}
 	public double down{get; private set;}
 	public double left{get; private set;}
@@ -111,18 +132,31 @@ class AABB{
 		return "AABB(Left: " + left + ", Right: " + right + ", Down: " + down + ", Up: " + up + ")";
 	}
 	
-	public float[] getDrawData(){
-		double w = (right - left) / 2d;
-		double h = (up - down) / 2d;
-		double mx = left + w;
-		double my = down + h;
+	public void draw(Matrix4 projection, Matrix4 view){
+		double w = right - left;
+		double h = up - down;
 		
-		float[] f = new float[4];
-		f[0] = (float) mx;
-		f[1] = (float) my;
+		Matrix4 model = Matrix4.CreateScale((Vector3) new Vector3d(w, h, 0d)) * Matrix4.CreateTranslation((Vector3) new Vector3d(left + w / 2d, down + h / 2d, 0d));
 		
-		f[2] = (float) w;
-		f[3] = (float) h;	
-		return f;
+		boxShader.use();
+		boxShader.setMatrix4("projection", projection);
+		boxShader.setMatrix4("view", view);
+		boxShader.setMatrix4("model", model);
+		
+		boxMesh.draw();
+	}
+	
+	public void draw(Matrix4 projection){
+		double w = right - left;
+		double h = up - down;
+		
+		Matrix4 model = Matrix4.CreateScale((Vector3) new Vector3d(w, h, 0d)) * Matrix4.CreateTranslation((Vector3) new Vector3d(left + w / 2d, down + h / 2d, 0d));
+		
+		boxShader.use();
+		boxShader.setMatrix4("projection", projection);
+		boxShader.setMatrix4("view", Matrix4.Identity);
+		boxShader.setMatrix4("model", model);
+		
+		boxMesh.draw();
 	}
 }

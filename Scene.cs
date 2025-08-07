@@ -3,26 +3,9 @@ using OpenTK;
 using OpenTK.Graphics.OpenGL;
 using OpenTK.Mathematics;
 
-class Scene{
-	public Camera cam{get; private set;}
-	
+class Scene{	
 	static Shader sceneShader;
-	
 	static Mesh sceneMesh;
-	
-	Texture2D texture;
-	
-	public Scene(Renderer ren){
-		cam = ren.cam;
-		
-		texture = Texture2D.fromAssembly("res.textures.sce.png", TextureParams.Default);
-		
-		cam.onViewChange += setView;
-		
-		//Initial update needed to set it
-		setProjection(ren.projection);
-		setView(null, EventArgs.Empty);
-	}
 	
 	public static void initialize(){
 		sceneShader = Shader.fromAssembly("shaders.scene");
@@ -37,6 +20,22 @@ class Scene{
 		};
 		
 		sceneMesh = new Mesh("2", vertices, PrimitiveType.Triangles);
+	}
+	
+	public Camera cam{get; private set;}
+	
+	Texture2D texture;
+	
+	public Scene(Renderer ren){
+		cam = ren.cam;
+		
+		texture = Texture2D.fromAssembly("res.textures.sce.png", TextureParams.Default);
+		
+		cam.onViewChange += setView;
+		
+		//Initial update needed to set it
+		setProjection(ren.projection);
+		setView(null, EventArgs.Empty);
 	}
 	
 	public void setProjection(Matrix4 m){

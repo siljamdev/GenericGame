@@ -98,6 +98,7 @@ partial class GenericGame : GameWindow{
 		testSound2 = Sound.monoFromAssembly("res.sounds.gnome.ogg");
 		
 		Scene.initialize();
+		AABB.initialize();
 		
 		initializeScreens();
 		
