@@ -72,6 +72,8 @@ class Renderer{
 		//other utilities
 		
 		cam = new Camera(this);
+		cam.onViewChange += AABB.setView;
+		cam.onViewChange += LineStrip.setView;
 		
 		float[] vertices = { //y is in -1 so starting pos of the text is in the left upper corner
 			1f, -1f,
@@ -156,6 +158,8 @@ class Renderer{
 		
 		fr.setProjection(projection);
 		genGame.sce?.setProjection(projection);
+		AABB.setProjection(projection);
+		LineStrip.setProjection(projection);
 		
 		overlayScreen.updateProj(this);
 		

@@ -99,6 +99,7 @@ partial class GenericGame : GameWindow{
 		
 		Scene.initialize();
 		AABB.initialize();
+		LineStrip.initialize();
 		
 		initializeScreens();
 		
