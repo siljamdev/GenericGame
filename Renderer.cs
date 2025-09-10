@@ -84,7 +84,7 @@ class Renderer{
 			0f, -1f,
 		};
 		
-		uiMesh = new Mesh("2", vertices, PrimitiveType.Triangles);
+		uiMesh = new Mesh("2", vertices, PrimitiveType.Triangles, "ui");
 		
 		book = new Dictionary<string, Texture2D>();
 		uiShader = Shader.fromAssembly("shaders.ui");

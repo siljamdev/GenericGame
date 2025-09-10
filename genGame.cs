@@ -23,6 +23,69 @@ partial class GenericGame : GameWindow{
 	
 	public const string version = "1.0.0";
 	
+	#region static
+	public static List<(int, int?, int?)> meshesMarkedForDisposal = new(); //Need to dispose of these on the same thread or else a Fatal error will occur
+	public static List<int> texturesMarkedForDisposal = new(); //Need to dispose of these on the same thread or else a Fatal error will occur
+	
+	public static DeltaHelper dh;
+	
+	static GLFWCallbacks.ErrorCallback GLFWErrorCallback;
+	
+	static void Main(string[] args){
+		if(OperatingSystem.IsWindows()){
+			if(GetConsoleWindow() == IntPtr.Zero){
+				AttachConsole(ATTACH_PARENT_PROCESS);
+			}
+		}
+		
+		GLFWErrorCallback = OnGLFWError;
+		
+		GLFWProvider.SetErrorCallback(GLFWErrorCallback);
+		
+		#if DEBUG
+			using(GenericGame genGame = new GenericGame(new NativeWindowSettings{
+				Title = "Generic Game",
+				Vsync = VSyncMode.On,
+				ClientSize = new Vector2i(640, 480),
+				Icon = getIcon(),
+				Flags = ContextFlags.Debug
+			})){
+				genGame.Run();
+			}
+		#else
+			using(GenericGame genGame = new GenericGame(new NativeWindowSettings{
+				Title = "GenericGame",
+				Vsync = VSyncMode.On,
+				ClientSize = new Vector2i(640, 480),
+				Icon = getIcon()
+			})){
+				genGame.Run();
+			}
+		#endif
+	}
+	
+	static WindowIcon getIcon(){
+		using Stream s = AssemblyFiles.getStream("res.icon.png");
+		
+		//Generate the image and put it as icon
+		ImageResult image = ImageResult.FromStream(s, StbImageSharp.ColorComponents.RedGreenBlueAlpha);
+		if(image == null || image.Data == null){
+			return null;
+		}
+		
+		OpenTK.Windowing.Common.Input.Image i = new OpenTK.Windowing.Common.Input.Image(image.Width, image.Height, image.Data);
+		WindowIcon w = new WindowIcon(i);
+		
+		return w;
+	}
+	
+	#region errors
+	private static void OnGLFWError(OpenTK.Windowing.GraphicsLibraryFramework.ErrorCode error, string description){
+        Console.Error.WriteLine("[GLFW Error] " + error + ": " + description);
+    }
+	#endregion
+	#endregion
+	
 	KeyBind fullscreen = new KeyBind(Keys.F11, false);
 	KeyBind screenshot = new KeyBind(Keys.F2, false);
 	
@@ -33,13 +96,11 @@ partial class GenericGame : GameWindow{
 	KeyBind moveLeft = new KeyBind(Keys.A, true);
 	KeyBind moveRight = new KeyBind(Keys.D, true);
 	
-	//These are static
+	//These dont change
 	KeyBind escape = new KeyBind(Keys.Escape, Keys.LeftShift, false);
 	KeyBind help = new KeyBind(Keys.F1, false);
 	KeyBind logUp = new KeyBind(Keys.Up, true);
 	KeyBind logDown = new KeyBind(Keys.Down, true);
-	
-	public static List<(int, int?)> meshesMarkedForDisposal = new(); //Need to dispose of these on the same thread or else a Fatal error will occur
 	
 	public Dependencies dep;
 	public AshFile config;
@@ -55,29 +116,16 @@ partial class GenericGame : GameWindow{
 	Sound testSound;
 	Sound testSound2;
 	
-	public static DeltaHelper dh;
-	
 	bool isFullscreened;
 	
 	float maxFps = 144f;
 	
-	static void Main(string[] args){
-		if(OperatingSystem.IsWindows()){
-			if(GetConsoleWindow() == IntPtr.Zero){
-				AttachConsole(ATTACH_PARENT_PROCESS);
-			}
-		}
-		
-		using(GenericGame genGame = new GenericGame()){
-			genGame.Run();
-		}
-	}
+	#if DEBUG
+		DebugProc DebugMessageDelegate;
+	#endif
 	
-	GenericGame() : base(GameWindowSettings.Default, NativeWindowSettings.Default){
-		CenterWindow(new Vector2i(640, 480));
-		Title = "Generic Game";
-		
-		VSync = VSyncMode.On;
+	GenericGame(NativeWindowSettings n) : base(GameWindowSettings.Default, n){
+		CenterWindow();
 	}
 	
 	void initialize(){
@@ -87,12 +135,23 @@ partial class GenericGame : GameWindow{
 		string appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
 		dep = new Dependencies(appDataPath + "/genGame", true, new string[]{"screenshots"}, null);
 		
-		setIcon();
+		ren = new Renderer(this);
+		sm = new SoundManager();
 		
 		initializeConfig();
 		
-		ren = new Renderer(this);
-		sm = new SoundManager();
+		#if DEBUG
+			DebugMessageDelegate = OnDebugMessage;
+			
+			GL.DebugMessageCallback(DebugMessageDelegate, IntPtr.Zero);
+			GL.Enable(EnableCap.DebugOutput);
+			
+			// Optionally
+			GL.Enable(EnableCap.DebugOutputSynchronous);
+			
+			Console.WriteLine("Testing stdout");
+			Console.Error.WriteLine("Testing stderr");
+		#endif
 		
 		testSound = Sound.monoFromAssembly("res.sounds.goofy.ogg");
 		testSound2 = Sound.monoFromAssembly("res.sounds.gnome.ogg");
@@ -125,7 +184,8 @@ partial class GenericGame : GameWindow{
 		AshFileModel afm = new AshFileModel(
 			new ModelInstance(ModelInstanceOperation.Type, "vsync", true),
 			new ModelInstance(ModelInstanceOperation.Type, "maxFps", 144f),
-			new ModelInstance(ModelInstanceOperation.Type, "controls", k)
+			new ModelInstance(ModelInstanceOperation.Type, "controls", k),
+			new ModelInstance(ModelInstanceOperation.Type, "sound", true)
 		);
 		
 		config = dep.config;
@@ -155,6 +215,8 @@ partial class GenericGame : GameWindow{
 			moveLeft.key = (Keys)ka[5];
 			moveRight.key = (Keys)ka[6];
 		}
+		
+		sm.isActive = config.GetValue<bool>("sound");
 	}
 	
 	public void setVsync(bool b){
@@ -168,6 +230,7 @@ partial class GenericGame : GameWindow{
 	void handleKeyboardInput(){
 		// check to see if the window is focused
 		if(!IsFocused){
+			ren.cam.endFrame();
 			return;
 		}
 		
@@ -268,12 +331,13 @@ partial class GenericGame : GameWindow{
 		}
 	}
 	
+	#region errors
 	public void checkErrors(){
 		OpenTK.Graphics.OpenGL.ErrorCode errorCode = GL.GetError();
         while(errorCode != OpenTK.Graphics.OpenGL.ErrorCode.NoError){
-            Console.Error.WriteLine("OpenGL Error: " + errorCode);
+            Console.Error.WriteLine("[OpenGL Error] " + errorCode);
 			if(ren != null){
-				ren.setCornerInfo("OpenGL Error: " + errorCode, Renderer.redTextColor);
+				ren.setCornerInfo("[OpenGL Error] " + errorCode, Renderer.redTextColor);
 			}
 			
             errorCode = GL.GetError();
@@ -281,15 +345,41 @@ partial class GenericGame : GameWindow{
 		sm.checkErrors();
 	}
 	
-	void disposeOfMeshes(){
-		foreach((int VAO, int? VBO) in meshesMarkedForDisposal){		
-			GL.DeleteVertexArray(VAO);
+	#if DEBUG
+		void OnDebugMessage(
+			DebugSource source,     // Source of the debugging message.
+			DebugType type,         // Type of the debugging message.
+			int id,                 // ID associated with the message.
+			DebugSeverity severity, // Severity of the message.
+			int length,             // Length of the string in pMessage.
+			IntPtr pMessage,        // Pointer to message string.
+			IntPtr pUserParam)      // The pointer you gave to OpenGL, explained later.
+		{
+			// In order to access the string pointed to by pMessage, you can use Marshal
+			// class to copy its contents to a C# string without unsafe code. You can
+			// also use the new function Marshal.PtrToStringUTF8 since .NET Core 1.1.
+			string message = Marshal.PtrToStringUTF8(pMessage, length);
 			
-			if(VBO != null){				
-				GL.DeleteBuffer((int) VBO);
+			Console.Error.WriteLine("[OpenGL Error] Severity: " + severity + " Source: " + source + " Type: " + type + " Id: " + id + " Message: " + message);
+			//Console.Error.WriteLine("[{0} source={1} type={2} id={3}] {4}", severity, source, type, id, message);
+			
+			if(ren != null){
+				ren.setCornerInfo("[OpenGL Error] " + source, Renderer.redTextColor);
 			}
 		}
+	#endif
+	#endregion
+	
+	void dispose(){
+		foreach((int VAO, int? VBO, int? EBO) in meshesMarkedForDisposal){		
+			Mesh.cleanup(VAO, VBO, EBO);
+		}
 		meshesMarkedForDisposal.Clear();
+		
+		foreach(int tid in texturesMarkedForDisposal){		
+			Texture2D.cleanup(tid);
+		}
+		texturesMarkedForDisposal.Clear();
 	}
 	
 	void captureScreenshot(){
@@ -321,21 +411,6 @@ partial class GenericGame : GameWindow{
 		}
 	}
 	
-	void setIcon(){
-		using Stream s = AssemblyFiles.getStream("res.icon.png");
-		
-		//Generate the image and put it as icon
-		ImageResult image = ImageResult.FromStream(s, StbImageSharp.ColorComponents.RedGreenBlueAlpha);
-		if(image == null || image.Data == null){
-			return;
-		}
-		
-		OpenTK.Windowing.Common.Input.Image i = new OpenTK.Windowing.Common.Input.Image(image.Width, image.Height, image.Data);
-		WindowIcon w = new WindowIcon(i);
-		
-		this.Icon = w;
-	}
-	
 	protected override void OnKeyDown(KeyboardKeyEventArgs e){
 		if(ren.currentScreen != null){
 			if(!e.IsRepeat && e.Key != Keys.Escape && e.Key != Keys.Backspace){
@@ -363,7 +438,7 @@ partial class GenericGame : GameWindow{
 	}
 	
 	protected override void OnUnload(){
-		disposeOfMeshes();
+		dispose();
 		base.OnUnload();
 	}
 	
@@ -381,7 +456,7 @@ partial class GenericGame : GameWindow{
 		ren.draw();
 		Context.SwapBuffers();
 		checkErrors();
-		disposeOfMeshes();
+		dispose();
 		if(takeScreenshotNextTick){
 			captureScreenshot();
 			ren.setCornerInfo("Saved screenshot");
@@ -430,14 +505,14 @@ partial class GenericGame : GameWindow{
     }
 	
 	#region WINDOWS
-		[DllImport("user32.dll", CharSet = CharSet.Unicode)]
-		private static extern int MessageBox(IntPtr hWnd, string text, string caption, uint type);
-		
-		[DllImport("kernel32.dll")]
-		static extern bool AttachConsole(int dwProcessId);
-		const int ATTACH_PARENT_PROCESS = -1;
-		
-		[DllImport("kernel32.dll")]
-		static extern IntPtr GetConsoleWindow();
+	[DllImport("user32.dll", CharSet = CharSet.Unicode)]
+	private static extern int MessageBox(IntPtr hWnd, string text, string caption, uint type);
+	
+	[DllImport("kernel32.dll")]
+	static extern bool AttachConsole(int dwProcessId);
+	const int ATTACH_PARENT_PROCESS = -1;
+	
+	[DllImport("kernel32.dll")]
+	static extern IntPtr GetConsoleWindow();
 	#endregion
 }

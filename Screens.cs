@@ -13,6 +13,7 @@ partial class GenericGame{
 	UiScreen optionsMenu = null!;
 	UiCheck vsync;
 	UiField maxFpsF;
+	UiCheck sound;
 	
 	UiScreen controlsMenu = null!;
 	
@@ -51,11 +52,13 @@ partial class GenericGame{
 		
 		vsync = new UiCheck(Placement.Center, 0f, -1f * Renderer.separation, Renderer.textSize.Y + 10f, Renderer.textSize.Y + 10f, "Vsync:", config.GetValue<bool>("vsync"), Renderer.buttonColor);
 		maxFpsF = new UiField(Placement.Center, 0f, 0f, 30f, "Max FPS:", maxFps.ToString(), 6, WritingType.FloatPositive);
+		sound = new UiCheck(Placement.Center, 0f, 1f * Renderer.separation, Renderer.textSize.Y + 10f, Renderer.textSize.Y + 10f, "Sound:", config.GetValue<bool>("sound"), Renderer.buttonColor);
 		
 		optionsMenu = new UiScreen(
 			new UiText(Placement.TopCenter, 0f, 20f, "Options", Renderer.titleTextColor),
 			vsync,
 			maxFpsF,
+			sound,
 			new UiButton(Placement.BottomCenter, 0f, 3f * Renderer.separation, 300f, "Controls", Renderer.buttonColor).setAction(() => ren.setScreen(controlsMenu)),
 			new UiButton(Placement.BottomCenter, 0f, 2f * Renderer.separation, 300f, "Save", Renderer.greenButtonColor).setAction(() => {
 				config.Set("vsync", vsync.on);
@@ -67,10 +70,13 @@ partial class GenericGame{
 					optionsMenu.showError("Invalid max fps number");
 				}
 				
+				config.Set("sound", sound.on);
+				
 				config.Save();
 				
 				setVsync(config.GetValue<bool>("vsync"));
 				maxFps = config.GetValue<float>("maxFps");
+				sm.isActive = config.GetValue<bool>("sound");
 			}),
 			new UiButton(Placement.BottomCenter, 0f, 1f * Renderer.separation, 300f, "Close", Renderer.redButtonColor).setAction(ren.closeScreen)
 		).setErrorText(new UiText(Placement.BottomCenter, 0f, 200f, "", Renderer.redTextColor));

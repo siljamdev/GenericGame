@@ -19,7 +19,7 @@ class Scene{
 			-1f, -1f,
 		};
 		
-		sceneMesh = new Mesh("2", vertices, PrimitiveType.Triangles);
+		sceneMesh = new Mesh("2", vertices, PrimitiveType.Triangles, "scene");
 	}
 	
 	public Camera cam{get; private set;}

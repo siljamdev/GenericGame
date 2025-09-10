@@ -13,6 +13,8 @@ class SoundManager : IDisposable{
 	
 	const int initialSources = 4;
 	
+	public bool isActive;
+	
 	public SoundManager(){		
 		device = ALC.OpenDevice(null);
 		if(device.Handle == 0){
@@ -45,6 +47,10 @@ class SoundManager : IDisposable{
 			Console.Error.WriteLine("Only Mono sounds support directional audio");
 		}
 		
+		if(!isActive){
+			return;
+		}
+		
 		int? s = getFreeSource();
 		
 		if(s == null){
@@ -58,6 +64,7 @@ class SoundManager : IDisposable{
 		AL.Source(source, ALSourcei.Buffer, sound.id);
 		AL.Source(source, ALSourcef.Pitch, pitch);
 		AL.Source(source, ALSourcef.Gain, gain);
+		
 		AL.Source(source, ALSource3f.Position, ref pos);
 		
 		AL.SourcePlay(source);
@@ -67,7 +74,7 @@ class SoundManager : IDisposable{
 		play(sound, Vector3.Zero, gain, pitch);
 	}
 	
-	int? getFreeSource() {
+	int? getFreeSource(){
 		for(int i = 0; i < sources.Count; i++){
 			ALSourceState state = (ALSourceState) AL.GetSource(sources[i], ALGetSourcei.SourceState);
 			if(state != ALSourceState.Playing && state != ALSourceState.Paused){
@@ -86,21 +93,23 @@ class SoundManager : IDisposable{
 		return s;
 	}
 	
+	#region errors
 	public void checkErrors(){
 		ALError error = AL.GetError();
 		while(error != ALError.NoError){
-			Console.Error.WriteLine("OpenAL Error: " + error);
+			Console.Error.WriteLine("[OpenAL Error] " + error);
 			
 			error = AL.GetError();
 		}
 		
 		AlcError error2 = ALC.GetError(device);
 		while(error2 != AlcError.NoError){
-			Console.Error.WriteLine("OpenAL Context Error: " + error);
+			Console.Error.WriteLine("[OpenAL Context Error] " + error);
 			
 			error2 = ALC.GetError(device);
 		}
 	}
+	#endregion
 	
 	public void Dispose(){
 		foreach(int s in sources){
