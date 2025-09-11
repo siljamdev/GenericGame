@@ -103,6 +103,10 @@ class UiScreen{
 					}
 				}
 				
+				ren.uipr.add(new MouseParticle(mouse));
+				ren.uipr.add(new MouseParticle(mouse));
+				ren.uipr.add(new MouseParticle(mouse));
+				ren.uipr.add(new MouseParticle(mouse));
 				return true;
 			}
 		}

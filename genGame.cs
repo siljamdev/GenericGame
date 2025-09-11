@@ -185,7 +185,8 @@ partial class GenericGame : GameWindow{
 			new ModelInstance(ModelInstanceOperation.Type, "vsync", true),
 			new ModelInstance(ModelInstanceOperation.Type, "maxFps", 144f),
 			new ModelInstance(ModelInstanceOperation.Type, "controls", k),
-			new ModelInstance(ModelInstanceOperation.Type, "sound", true)
+			new ModelInstance(ModelInstanceOperation.Type, "sound", true),
+			new ModelInstance(ModelInstanceOperation.Type, "particles", true)
 		);
 		
 		config = dep.config;
@@ -202,9 +203,19 @@ partial class GenericGame : GameWindow{
 		
 		config.Save();
 		
+		loadConfig();
+		loadControls();
+	}
+	
+	void loadConfig(){
 		setVsync(config.GetValue<bool>("vsync"));
 		maxFps = config.GetValue<float>("maxFps");
 		
+		sm.isActive = config.GetValue<bool>("sound");
+		ParticleRenderer.isActive = config.GetValue<bool>("particles");
+	}
+	
+	void loadControls(){
 		int[] ka = config.GetValue<int[]>("controls");
 		if(ka.Length > 6){
 			fullscreen.key = (Keys)ka[0];
@@ -215,8 +226,6 @@ partial class GenericGame : GameWindow{
 			moveLeft.key = (Keys)ka[5];
 			moveRight.key = (Keys)ka[6];
 		}
-		
-		sm.isActive = config.GetValue<bool>("sound");
 	}
 	
 	public void setVsync(bool b){

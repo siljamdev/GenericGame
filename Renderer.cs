@@ -33,13 +33,14 @@ class Renderer{
 	
 	public Camera cam{get; private set;}
 	public FontRenderer fr{get; private set;}
+	public ParticleRenderer uipr{get; private set;} //UI particle renderer
 	
 	Dictionary<string, Texture2D> book;
 
-	Mesh uiMesh;
+	public Mesh uiMesh{get; private set;}
 	
-	Shader uiShader;
-	Shader rectShader;
+	public Shader uiShader{get; private set;}
+	public Shader rectShader{get; private set;}
 	
 	GenericGame genGame;
 	
@@ -91,6 +92,8 @@ class Renderer{
 		rectShader = Shader.fromAssembly("shaders.rect");
 		
 		fr = new FontRenderer(uiMesh, Texture2D.fromAssembly("res.textures.font.png", TextureParams.Default), 16, 16);
+		
+		uipr = new ParticleRenderer();
 		
 		//load textures
 		addTexture("tick", Texture2D.fromAssembly("res.textures.tick.png", TextureParams.Default));
@@ -185,6 +188,7 @@ class Renderer{
 		
 		rectShader.use();
 		rectShader.setMatrix4("model", model);
+		rectShader.setMatrix4("view", Matrix4.Identity);
 		rectShader.setVector4("col", col, alpha);
 		
 		uiMesh.draw();
@@ -268,5 +272,7 @@ class Renderer{
 		}else{			
 			currentScreen?.draw(this, true);
 		}
+		
+		uipr.draw(this); //Render particles
 	}
 }
