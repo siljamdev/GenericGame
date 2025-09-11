@@ -213,6 +213,8 @@ partial class GenericGame : GameWindow{
 		
 		sm.isActive = config.GetValue<bool>("sound");
 		ParticleRenderer.isActive = config.GetValue<bool>("particles");
+		
+		this.UpdateFrequency = maxFps;
 	}
 	
 	void loadControls(){
@@ -473,9 +475,9 @@ partial class GenericGame : GameWindow{
 		}
 		base.OnRenderFrame(args);
 		dh.Frame();
-		if(VSync != VSyncMode.On){
+		/* if(VSync != VSyncMode.On){
 			dh.Target(maxFps);
-		}
+		} */
 	}
 	
 	protected override void OnMouseWheel(MouseWheelEventArgs args){
