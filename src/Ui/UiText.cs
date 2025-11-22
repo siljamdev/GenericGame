@@ -37,7 +37,7 @@ class UiText : UiElement{
 		return base.getPos(ren, size);
 	}
 	
-	protected override AABB updateBox(Renderer ren){
+	protected override AABB2D updateBox(Renderer ren){
 		return null;
 	}
 }

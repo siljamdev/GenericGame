@@ -11,7 +11,7 @@ class LineStrip{
 	static Matrix4 view;
 	
 	public static void initialize(){
-		lineShader = Shader.fromAssembly("shaders.AABB"); //Same as AABBs
+		lineShader = Shader.fromAssembly("shaders.AABB"); //Same as AABB2Ds
 		lineShader.setVector3("color", Color3.Green);
 		
 		lineShader.setMatrix4("model", Matrix4.Identity); //Meshes are generated with world positions, so its not necessary

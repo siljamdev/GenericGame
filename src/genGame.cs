@@ -44,7 +44,7 @@ partial class GenericGame : GameWindow{
 		
 		#if DEBUG
 			using(GenericGame genGame = new GenericGame(new NativeWindowSettings{
-				Title = "Generic Game",
+				Title = "Generic Game - v" + version,
 				Vsync = VSyncMode.On,
 				ClientSize = new Vector2i(640, 480),
 				Icon = getIcon(),
@@ -102,19 +102,18 @@ partial class GenericGame : GameWindow{
 	KeyBind logUp = new KeyBind(Keys.Up, true);
 	KeyBind logDown = new KeyBind(Keys.Down, true);
 	
-	public Dependencies dep;
+	public Dependencies dep {get; private set;}
 	public AshFile config;
 	
 	bool takeScreenshotNextTick;
 	
-	Renderer ren;
+	public Renderer ren {get; private set;}
 	
 	public Scene sce;
 	
-	public SoundManager sm;
+	public SoundManager sm {get; private set;}
 	
-	Sound testSound;
-	Sound testSound2;
+	Sound exampleSound;
 	
 	bool isFullscreened;
 	
@@ -135,29 +134,29 @@ partial class GenericGame : GameWindow{
 		string appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
 		dep = new Dependencies(appDataPath + "/genGame", true, new string[]{"screenshots"}, null);
 		
-		ren = new Renderer(this);
-		sm = new SoundManager();
-		
-		initializeConfig();
-		
 		#if DEBUG
 			DebugMessageDelegate = OnDebugMessage;
 			
 			GL.DebugMessageCallback(DebugMessageDelegate, IntPtr.Zero);
 			GL.Enable(EnableCap.DebugOutput);
 			
-			// Optionally
+			//Optionally
 			GL.Enable(EnableCap.DebugOutputSynchronous);
 			
 			Console.WriteLine("Testing stdout");
 			Console.Error.WriteLine("Testing stderr");
 		#endif
 		
-		testSound = Sound.monoFromAssembly("res.sounds.goofy.ogg");
-		testSound2 = Sound.monoFromAssembly("res.sounds.gnome.ogg");
+		ren = new Renderer(this);
+		sm = new SoundManager();
+		
+		initializeConfig();
+		
+		//Example
+		exampleSound = Sound.monoFromAssembly("res.sounds.gnome.ogg");
 		
 		Scene.initialize();
-		AABB.initialize();
+		AABB2D.initialize();
 		LineStrip.initialize();
 		
 		initializeScreens();
@@ -251,12 +250,6 @@ partial class GenericGame : GameWindow{
 				ren.closeScreen();
 			}else{
 				ren.setScreen(pauseMenu);
-				
-				//Delete this please
-				Random rnd = new();
-				Vector3 c = new Vector3((float)(rnd.NextDouble() * 2.0 - 1.0), (float)(rnd.NextDouble() * 2.0 - 1.0), (float)(rnd.NextDouble() * 2.0 - 1.0));
-				c.Normalize();
-				sm.play(testSound2, c);
 			}
 			
 			break;
@@ -282,8 +275,8 @@ partial class GenericGame : GameWindow{
 		if(advancedMode.isActive(KeyboardState)){
 			ren.toggleAdvancedMode();
 			
-			//Delete this too
-			sm.play(testSound);
+			//Example
+			sm.play(exampleSound);
 		}
 		
 		if(ren.currentScreen != null){			
@@ -344,15 +337,17 @@ partial class GenericGame : GameWindow{
 	
 	#region errors
 	public void checkErrors(){
-		OpenTK.Graphics.OpenGL.ErrorCode errorCode = GL.GetError();
-        while(errorCode != OpenTK.Graphics.OpenGL.ErrorCode.NoError){
-            Console.Error.WriteLine("[OpenGL Error] " + errorCode);
-			if(ren != null){
-				ren.setCornerInfo("[OpenGL Error] " + errorCode, Renderer.redTextColor);
+		#if !DEBUG
+			OpenTK.Graphics.OpenGL.ErrorCode errorCode = GL.GetError();
+			while(errorCode != OpenTK.Graphics.OpenGL.ErrorCode.NoError){
+				Console.Error.WriteLine("[OpenGL Error] " + errorCode);
+				if(ren != null){
+					ren.setCornerInfo("[OpenGL Error] " + errorCode, Renderer.redTextColor);
+				}
+				
+				errorCode = GL.GetError();
 			}
-			
-            errorCode = GL.GetError();
-        }
+		#endif
 		sm.checkErrors();
 	}
 	

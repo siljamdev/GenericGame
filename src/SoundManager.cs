@@ -36,13 +36,15 @@ class SoundManager : IDisposable{
 		
 		setPos(Vector3.Zero);
 		AL.Listener(ALListenerfv.Orientation, new float[]{0f, 0f, -1f, 0f, 1f, 0f});
+		
+		AL.DistanceModel(ALDistanceModel.InverseDistanceClamped);
 	}
 	
 	public void setPos(Vector3 p){
 		AL.Listener(ALListener3f.Position, ref p);
 	}
 	
-	public void play(Sound sound, Vector3 pos, float gain = 1.0f, float pitch = 1.0f){
+	public void play(Sound sound, Vector3 pos, float gain = 1.0f, float pitch = 1.0f, float rollof = 1f){
 		if(pos != Vector3.Zero && !sound.isMono){
 			Console.Error.WriteLine("Only Mono sounds support directional audio");
 		}
@@ -62,16 +64,50 @@ class SoundManager : IDisposable{
 		AL.SourceStop(source);
 		
 		AL.Source(source, ALSourcei.Buffer, sound.id);
+		
 		AL.Source(source, ALSourcef.Pitch, pitch);
 		AL.Source(source, ALSourcef.Gain, gain);
+		AL.Source(source, ALSourcef.MaxGain, 1f);
+		
+		AL.Source(source, ALSourceb.SourceRelative, false);
+		AL.Source(source, ALSourcef.RolloffFactor, rollof);
+		AL.Source(source, ALSourcef.ReferenceDistance, 2f);
+		AL.Source(source, ALSourcef.MaxDistance, 32f);
 		
 		AL.Source(source, ALSource3f.Position, ref pos);
 		
 		AL.SourcePlay(source);
 	}
 	
-	public void play(Sound sound, float gain = 1.0f, float pitch = 1.0f){
-		play(sound, Vector3.Zero, gain, pitch);
+	public void play(Sound sound, float gain = 1.0f, float pitch = 1.0f, float rollof = 1f){
+		play(sound, Vector3.Zero, gain, pitch, rollof);
+	}
+	
+	//Always max vol
+	public void playNonPositional(Sound sound, float gain = 1.0f, float pitch = 1.0f){
+		if(!isActive){
+			return;
+		}
+		
+		int? s = getFreeSource();
+		
+		if(s == null){
+			return;
+		}
+		
+		int source = (int) s;
+		
+		AL.SourceStop(source);
+		
+		AL.Source(source, ALSourcei.Buffer, sound.id);
+		
+		AL.Source(source, ALSourcef.Pitch, pitch);
+		AL.Source(source, ALSourcef.Gain, gain);
+		
+		AL.Source(source, ALSourceb.SourceRelative, true);
+		AL.Source(source, ALSource3f.Position, 0f, 0f, 0f);
+		
+		AL.SourcePlay(source);
 	}
 	
 	int? getFreeSource(){

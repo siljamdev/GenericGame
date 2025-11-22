@@ -4,7 +4,7 @@ using OpenTK.Mathematics;
 using OpenTK.Graphics.OpenGL;
 using AshLib;
 
-class AABB{
+class AABB2D{
 	static Shader boxShader;
 	static Mesh boxMesh;
 	
@@ -40,7 +40,7 @@ class AABB{
 	public double left{get; private set;}
 	public double right{get; private set;}
 	
-	public AABB(Vector2d a, Vector2d b){
+	public AABB2D(Vector2d a, Vector2d b){
 		if(a.X > b.X){
 			left = b.X;
 			right = a.X;
@@ -58,7 +58,7 @@ class AABB{
 		}
 	}
 	
-	public AABB(double u, double d, double l, double r){
+	public AABB2D(double u, double d, double l, double r){
 		up = u;
 		down = d;
 		left = l;
@@ -72,27 +72,27 @@ class AABB{
 		right += r;
 	}
 	
-	public static bool contained(Vector2d a, AABB b){ //a is contained in b
+	public static bool contained(Vector2d a, AABB2D b){ //a is contained in b
 		return b.left < a.X && b.right > a.X && b.down < a.Y && b.up > a.Y;
 	}
 	
-	public static bool contained(AABB a, AABB b){ //a is contained in b
+	public static bool contained(AABB2D a, AABB2D b){ //a is contained in b
 		return b.left < a.left && b.right > a.right && b.down < a.down && b.up > a.up;
 	}
 	
-	public static bool collide(AABB a, AABB b){
+	public static bool collide(AABB2D a, AABB2D b){
 		return a.left <= b.right && a.right >= b.left && a.down <= b.up && a.up >= b.down;
 	}
 	
-	public static bool collide(AABB a, Vector2d b){
+	public static bool collide(AABB2D a, Vector2d b){
 		return a.left <= b.X && a.right >= b.X && a.down <= b.Y && a.up >= b.Y;
 	}
 	
-	public static bool collide(Vector2d a, AABB b){
+	public static bool collide(Vector2d a, AABB2D b){
 		return collide(b, a);
 	}
 	
-	public static AABB union(params AABB[] boxes){
+	public static AABB2D union(params AABB2D[] boxes){
 		if(boxes.Length == 0){
 			return null;
 		}
@@ -101,17 +101,17 @@ class AABB{
 		double newDown = boxes[0].down;
 		double newUp = boxes[0].up;
 		
-		foreach (AABB other in boxes){
+		foreach (AABB2D other in boxes){
 			newLeft = Math.Min(newLeft, other.left);
 			newRight = Math.Max(newRight, other.right);
 			newDown = Math.Min(newDown, other.down);
 			newUp = Math.Max(newUp, other.up);
 		}
 		
-		return new AABB(newUp, newDown, newLeft, newRight);
+		return new AABB2D(newUp, newDown, newLeft, newRight);
 	}
 	
-	public bool collide(AABB b){
+	public bool collide(AABB2D b){
 		return collide(this, b);
 	}
 	
@@ -120,24 +120,24 @@ class AABB{
 	}
 	
 	//Collision, thought it looked cool
-	public static bool operator %(AABB a, AABB b){
+	public static bool operator %(AABB2D a, AABB2D b){
 		return collide(a, b);
 	}
 	
-	public static bool operator %(AABB a, Vector2d b){
+	public static bool operator %(AABB2D a, Vector2d b){
 		return collide(a, b);
 	}
 	
-	public static bool operator %(Vector2d a, AABB b){
+	public static bool operator %(Vector2d a, AABB2D b){
 		return collide(a, b);
 	}
 	
-	public static AABB operator +(AABB a, AABB b){
+	public static AABB2D operator +(AABB2D a, AABB2D b){
 		return union(a, b);
 	}
 	
 	public override string ToString(){
-		return "AABB(Left: " + left + ", Right: " + right + ", Down: " + down + ", Up: " + up + ")";
+		return "AABB2D(Left: " + left + ", Right: " + right + ", Down: " + down + ", Up: " + up + ")";
 	}
 	
 	public void drawWorld(){

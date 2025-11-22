@@ -24,12 +24,8 @@ class Scene{
 	
 	public Camera cam{get; private set;}
 	
-	Texture2D texture;
-	
 	public Scene(Renderer ren){
 		cam = ren.cam;
-		
-		texture = Texture2D.fromAssembly("res.textures.sce.png", TextureParams.Default);
 		
 		cam.onViewChange += setView;
 		
@@ -52,7 +48,7 @@ class Scene{
 		sceneShader.use();
 		sceneShader.setMatrix4("model", model);
 		
-		texture.bind();
+		ren.iconTex.bind();
 		
 		sceneMesh.draw();
 	}

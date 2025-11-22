@@ -3,7 +3,7 @@ using OpenTK;
 using OpenTK.Mathematics;
 
 abstract class UiElement{
-	public AABB box{get; private set;}
+	public AABB2D box{get; private set;}
 	
 	public Placement placement;
 	public Vector2 offset{get; private set;}
@@ -74,9 +74,28 @@ abstract class UiElement{
 	
 	abstract public void drawHover(Renderer ren, Vector2d mousePos);
 	
-	abstract protected AABB updateBox(Renderer ren);
+	abstract protected AABB2D updateBox(Renderer ren);
 	
 	abstract protected Vector2 updatePos(Renderer ren);
+	
+	protected void drawUsualDescription(Renderer ren, Vector2d mousePos, string description){
+		Vector2 mouse = (Vector2) mousePos;
+		
+		Vector2 size = new Vector2(ren.fr.getXsize(description, Renderer.textSize) + 10f, Renderer.textSize.Y + 10f);
+		
+		if(mouse.X + size.X <= ren.width / 2f){
+			ren.drawRect(mouse.X, mouse.Y + Renderer.textSize.Y + 10f, size.X, size.Y, Renderer.black, 0.5f);
+			ren.fr.drawText(description, mouse.X + 5f, mouse.Y + Renderer.textSize.Y + 5f, Renderer.textSize, Renderer.textColor);
+		}else{
+			if((mouse.X + size.X) - (ren.width / 2f) <= (-ren.width / 2f) - (mouse.X - size.X)){
+				ren.drawRect(mouse.X, mouse.Y + Renderer.textSize.Y + 10f, size.X, size.Y, Renderer.black, 0.5f);
+				ren.fr.drawText(description, mouse.X + 5f, mouse.Y + Renderer.textSize.Y + 5f, Renderer.textSize, Renderer.textColor);
+			}else{
+				ren.drawRect(mouse.X - size.X, mouse.Y + Renderer.textSize.Y + 10f, size.X, size.Y, Renderer.black, 0.5f);
+				ren.fr.drawText(description, mouse.X - size.X + 5f, mouse.Y + Renderer.textSize.Y + 5f, Renderer.textSize, Renderer.textColor);
+			}
+		}
+	}
 }
 
 enum Placement{

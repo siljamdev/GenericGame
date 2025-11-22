@@ -77,7 +77,7 @@ class UiLog : UiElement{
 		return Vector2.Zero;
 	}
 	
-	protected override AABB updateBox(Renderer ren){
+	protected override AABB2D updateBox(Renderer ren){
 		return null;
 	}
 	
