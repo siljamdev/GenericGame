@@ -38,7 +38,7 @@
   </ItemGroup>
   
   <ItemGroup Condition="('$(Configuration)' == 'Debug' and '$(OS)' == 'Windows_NT') or '$(RuntimeIdentifier)' == 'win-x64' or '$(RuntimeIdentifier)' == 'win-x86' or '$(RuntimeIdentifier)' == 'win-arm64'">
-	<None Update="lib/openal32.dll">
+	<None Update="lib/windows/*.dll">
 		<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		<Link>%(Filename)%(Extension)</Link>
 		<TargetPath>%(Filename)%(Extension)</TargetPath>
