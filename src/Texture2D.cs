@@ -194,12 +194,12 @@ public class Texture2D : IDisposable{
 		}
 	}
 	
-	public static void cleanup(int tid){
-		GL.DeleteTexture(tid);
-	}
-	
+	//ONLY call in main thread
 	public void Dispose(){
-		GenericGame.texturesMarkedForDisposal.Add(this.id);
+		if(this.id != 0){
+			GL.DeleteTexture(this.id);
+			this.id = 0;
+		}
 		
 		if(activeTexture[_unit] == this.id){
 			activeTexture[_unit] = 0;
@@ -209,7 +209,7 @@ public class Texture2D : IDisposable{
 	}
 	
 	~Texture2D(){
-		Dispose();
+		GenericGame.resourcesMarkedForDisposal.Enqueue(this);
 	}
 }
 

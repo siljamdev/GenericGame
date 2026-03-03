@@ -8,11 +8,10 @@ using OpenTK.Mathematics;
 using AshLib;
 
 class Renderer{
+	#region static
+	static readonly Color4 backgroundColor = new Color4(0f, 0f, 0f, 1f);
+	static readonly Color4 mainMenuBackgroundColor = new Color4(0.18f, 0.38f, 0.33f, 1f);
 	
-	public int width{get; private set;}
-	public int height{get; private set;}
-	
-	Color4 backgroundColor = new Color4(0, 0, 0, 1);
 	//public static readonly Vector2 textSize = new Vector2(15f, 18f);
 	public static readonly Vector2 textSize = new Vector2(18f);
 	
@@ -23,64 +22,70 @@ class Renderer{
 	public static readonly Color3 selectedTextColor = new Color3("FFFF8F");
 	public static readonly Color3 titleTextColor = new Color3("DFDFFF");
 	public static readonly Color3 fieldTextColor = new Color3("D6D6D6");
+	public static readonly Color3 redTextColor = new Color3("FF8888");
+	
 	public static readonly Color3 buttonColor = new Color3("555577");
 	public static readonly Color3 greenButtonColor = new Color3("557755");
 	public static readonly Color3 redButtonColor = new Color3("775555");
-	public static readonly Color3 redTextColor = new Color3("FF8888");
 	public static readonly Color3 fieldColor = new Color3("222222");
 	public static readonly Color3 fieldSelectedColor = new Color3("505050");
 	
 	public static readonly Color3 black = Color3.Black;
+	#endregion
 	
-	float ramMB = 0f;
-	float ramUpdateCounter = 0f;
+	public int width{get; private set;}
+	public int height{get; private set;}
 	
 	public Camera cam{get; private set;}
 	public FontRenderer fr{get; private set;}
 	public ParticleRenderer uipr{get; private set;} //UI particle renderer
-	
-	Dictionary<string, Texture2D> uiTexturesBook = new();
 
 	public Mesh uiMesh{get; private set;}
 	
 	public Shader uiShader{get; private set;}
 	public Shader rectShader{get; private set;}
 	
+	public Matrix4 projection{get; private set;}
+	
+	public UiScreen overlayScreen;
+	public UiScreen currentScreen;
+	
 	//Example
 	public Texture2D iconTex;
 	
 	GenericGame genGame;
 	
+	Dictionary<string, Texture2D> uiTexturesBook = new();
+	
+	Stack<UiScreen> screens;
+	
 	Stopwatch sw;
 	string corner;
 	Color3 cornerColor;
 	
-	public Matrix4 projection{get; private set;}
+	float ramMB = 0f;
+	float ramUpdateCounter = 0f;
 	
 	bool advancedMode;
 	
-	public UiScreen overlayScreen;
-	public UiScreen currentScreen;
-	
-	public Stack<UiScreen> screens{get; private set;}
-	
 	public Renderer(GenericGame st){
 		genGame = st;
-		sw = new Stopwatch();
 		
-		width = 640;
-		height = 480;
-		
-		screens = new Stack<UiScreen>();
+		width = st.ClientSize.X;
+		height = st.ClientSize.Y;
 		
 		//Enable transparency (blending)
 		GL.Enable(EnableCap.Blend);
 		GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
 		
+		screens = new Stack<UiScreen>();
+		
 		//other utilities
 		cam = new Camera(this);
 		cam.onViewChange += AABB2D.setView;
 		cam.onViewChange += LineStrip.setView;
+		
+		sw = new Stopwatch();
 		
 		float[] vertices = { //y is in -1 so starting pos of the text is in the left upper corner
 			1f, -1f,
@@ -100,7 +105,7 @@ class Renderer{
 		//fr = new BitmapFontRenderer(uiMesh, Texture2D.fromAssembly("res.textures.font.png", TextureParams.Default), 16, 16);
 		
 		//TrueType font
-		TTFont f = TTFont.fromAssembly("res.AtkinsonHyperlegible.ttf", TextureParams.Smooth, 128, 1024);
+		TTFont f = TTFont.fromAssembly("res.AtkinsonHyperlegible.ttf", TextureParams.Smooth, 128, 2048);
 		fr = new TruetypeFontRenderer(uiMesh, f, 9);
 
 		uipr = new ParticleRenderer();
@@ -108,17 +113,19 @@ class Renderer{
 		//Example texture
 		iconTex = Texture2D.fromAssembly("res.icon.png", TextureParams.Default);
 		
-		//load textures
-		addTexture("tick", Texture2D.fromAssembly("res.textures.tick.png", TextureParams.Default));
-		addTexture("screenshot", Texture2D.fromAssembly("res.textures.screenshotButton.png", TextureParams.Default));
-		addTexture("next", Texture2D.fromAssembly("res.textures.nextButton.png", TextureParams.Default));
-		addTexture("previous", Texture2D.fromAssembly("res.textures.previousButton.png", TextureParams.Default));
-		addTexture("icon", iconTex);
-		addTexture("info", Texture2D.fromAssembly("res.textures.infoIcon.png", TextureParams.Default));
-		addTexture("help", Texture2D.fromAssembly("res.textures.helpIcon.png", TextureParams.Default));
+		//load ui textures
+		addTexture("tick", Texture2D.fromAssembly("res.textures.ui.tick.png", TextureParams.Default)); //Used for UiCheck
+		addTexture("screenshot", Texture2D.fromAssembly("res.textures.ui.screenshotIcon.png", TextureParams.Default));
+		addTexture("next", Texture2D.fromAssembly("res.textures.ui.nextIcon.png", TextureParams.Default));
+		addTexture("previous", Texture2D.fromAssembly("res.textures.ui.previousIcon.png", TextureParams.Default));
+		addTexture("icon", iconTex); //not repeated object!!
+		addTexture("info", Texture2D.fromAssembly("res.textures.ui.infoIcon.png", TextureParams.Default));
+		addTexture("help", Texture2D.fromAssembly("res.textures.ui.helpIcon.png", TextureParams.Default));
+		addTexture("file", Texture2D.fromAssembly("res.textures.ui.fileIcon.png", TextureParams.Default));
 		
+		//Initialize overlay screen
 		overlayScreen = new UiScreen(
-			new UiImage(Placement.TopLeft, 0f, 0f, 30, 30, "icon", Color3.White)
+			new UiImage(Placement.TopLeft, 0f, 0f, 30, 30, "icon").setColor(Color3.White)
 		);
 		
 		overlayScreen.updateProj(this);
@@ -126,7 +133,7 @@ class Renderer{
 	
 	public void setScreen(UiScreen s){
 		if(currentScreen != null){
-			currentScreen.closeAction?.Invoke();
+			currentScreen.close();
 			screens.Push(currentScreen);
 		}
 		
@@ -144,10 +151,12 @@ class Renderer{
 		}
 		
 		if(screens.Count == 0){
+			currentScreen?.close();
 			currentScreen = null;
 			return;
 		}
 		
+		currentScreen?.close();
 		currentScreen = screens.Pop();
 		currentScreen?.updateProj(this);
 	}
@@ -178,7 +187,6 @@ class Renderer{
 		LineStrip.setProjection(projection);
 		
 		overlayScreen.updateProj(this);
-		
 		currentScreen?.updateProj(this);
 	}
 	
@@ -209,8 +217,8 @@ class Renderer{
 		uiMesh.draw();
 	}
 	
-	public void drawRect(float xp, float xy, float sx, float sy, Color3 c, float a = 1f){
-		drawRect(new Vector2(xp, xy), new Vector2(sx, sy), c, a);
+	public void drawRect(float xp, float xy, float sx, float sy, Color3 c, float alpha = 1f){
+		drawRect(new Vector2(xp, xy), new Vector2(sx, sy), c, alpha);
 	}
 	
 	public void drawTexture(string n, Vector2 pos, Vector2 sca, Color3 col, float alpha = 1f){
@@ -238,18 +246,30 @@ class Renderer{
 	}
 	
 	//General draw loop
-	public void draw(){
-		GL.ClearColor(backgroundColor);
-		GL.Clear(ClearBufferMask.ColorBufferBit);
-		
+	public void draw(){		
 		cam.startFrame();
 		
+		GL.ClearColor(genGame.sce == null ? mainMenuBackgroundColor : backgroundColor);
+		GL.Clear(ClearBufferMask.ColorBufferBit);
+		
 		//Render scene
+		genGame.sce?.draw(this);
+		
+		//Render ui
 		if(genGame.sce != null){
-			genGame.sce.draw(this);
-		}else{
-			drawRect(-width/2f, height/2f, width, height, new Color3("2D6054")); //background
+			if(currentScreen != null){
+				overlayScreen.draw(this, false);
+				
+				drawRect(-width/2f, height/2f, width, height, black, 0.6f);
+				currentScreen.draw(this, true);
+			}else{
+				overlayScreen.draw(this, true);
+			}
+		}else{			
+			currentScreen?.draw(this, true);
 		}
+		
+		uipr.draw(this); //Render particles
 		
 		//Render corner info
 		if(corner != null){
@@ -262,22 +282,6 @@ class Renderer{
 				sw.Stop();
 			}
 		}
-		
-		//Render ui
-		if(genGame.sce != null){
-			if(currentScreen != null){
-				overlayScreen.draw(this, false);
-				
-				drawRect(-width/2f, height/2f, width, height, Color3.Black, 0.6f);
-				currentScreen.draw(this, true);
-			}else{
-				overlayScreen.draw(this, true);
-			}
-		}else{			
-			currentScreen?.draw(this, true);
-		}
-		
-		uipr.draw(this); //Render particles
 		
 		//Render advanced info
 		if(advancedMode){

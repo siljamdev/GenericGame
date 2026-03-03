@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 	<AllowUnsafeBlocks>true</AllowUnsafeBlocks> <!-- Needed because of OpenAL and TTFs -->
@@ -15,6 +15,8 @@
 	
 	<PublishSingleFile>true</PublishSingleFile>
 	<IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+	
+	<BuildDate>$([System.DateTime]::UtcNow.ToString("dd/MM/yyyy"))</BuildDate>
   </PropertyGroup>
   
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
@@ -29,7 +31,7 @@
 	<EmbeddedResource Include="res/**" />
 	<EmbeddedResource Include="shaders/*" />
 	
-    <PackageReference Include="AshLib" Version="3.4.0" />
+    <PackageReference Include="AshLib" Version="3.5.2" />
     <PackageReference Include="OpenTK" Version="4.9.4" />
     <PackageReference Include="StbImageSharp" Version="2.30.15" />
     <PackageReference Include="StbImageWriteSharp" Version="1.16.7" />
@@ -37,7 +39,23 @@
     <PackageReference Include="StbVorbisSharp" Version="1.22.4" />
   </ItemGroup>
   
-  <ItemGroup Condition="('$(Configuration)' == 'Debug' and '$(OS)' == 'Windows_NT') or '$(RuntimeIdentifier)' == 'win-x64' or '$(RuntimeIdentifier)' == 'win-x86' or '$(RuntimeIdentifier)' == 'win-arm64'">
+  <!-- Windows -->
+  <PropertyGroup Condition="('$(Configuration)' == 'Debug' and '$(OS)' == 'Windows_NT') or '$(RuntimeIdentifier)' == 'win-x64' or '$(RuntimeIdentifier)' == 'win-x86' or '$(RuntimeIdentifier)' == 'win-arm' or '$(RuntimeIdentifier)' == 'win-arm64'">
+	<DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
+  </PropertyGroup>
+  
+  <!-- Linux -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'linux-x86' or '$(RuntimeIdentifier)' == 'linux-x64' or '$(RuntimeIdentifier)' == 'linux-arm' or '$(RuntimeIdentifier)' == 'linux-arm64'">
+	<DefineConstants>$(DefineConstants);LINUX</DefineConstants>
+  </PropertyGroup>
+  
+  <!-- MacOS -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'osx-x64' or '$(RuntimeIdentifier)' == 'osx-arm64'">
+	<DefineConstants>$(DefineConstants);MACOS</DefineConstants>
+  </PropertyGroup>
+  
+  <!-- Windows -->
+  <ItemGroup Condition="('$(Configuration)' == 'Debug' and '$(OS)' == 'Windows_NT') or '$(RuntimeIdentifier)' == 'win-x64' or '$(RuntimeIdentifier)' == 'win-x86' or '$(RuntimeIdentifier)' == 'win-arm' or '$(RuntimeIdentifier)' == 'win-arm64'">
 	<None Update="lib/windows/*.dll">
 		<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		<Link>%(Filename)%(Extension)</Link>
@@ -45,4 +63,56 @@
 	</None>
   </ItemGroup>
   
+  <!-- Linux -->
+  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'linux-x86'">
+    <None Update="lib/linux/x86/*.so">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>%(Filename)%(Extension)</Link>
+      <TargetPath>%(Filename)%(Extension)</TargetPath>
+    </None>
+  </ItemGroup>
+  
+  <!-- Linux -->
+  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'linux-x64'">
+    <None Update="lib/linux/x86_64/*.so">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>%(Filename)%(Extension)</Link>
+      <TargetPath>%(Filename)%(Extension)</TargetPath>
+    </None>
+  </ItemGroup>
+  
+  <!-- Linux -->
+  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'linux-arm'">
+    <None Update="lib/linux/armhf/*.so">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>%(Filename)%(Extension)</Link>
+      <TargetPath>%(Filename)%(Extension)</TargetPath>
+    </None>
+  </ItemGroup>
+  
+  <!-- Linux -->
+  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'linux-arm64'">
+    <None Update="lib/linux/aarch64/*.so">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>%(Filename)%(Extension)</Link>
+      <TargetPath>%(Filename)%(Extension)</TargetPath>
+    </None>
+  </ItemGroup>
+  
+  <!-- MacOS -->
+  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'osx-x64' or '$(RuntimeIdentifier)' == 'osx-arm64'">
+    <None Update="lib/macos/*.dylib">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>%(Filename)%(Extension)</Link>
+      <TargetPath>%(Filename)%(Extension)</TargetPath>
+    </None>
+  </ItemGroup>
+  
+  <Target Name="GenerateBuildInfo" BeforeTargets="CoreCompile">
+    <WriteLinesToFile File="$(IntermediateOutputPath)BuildInfo.g.cs" Lines="public static class BuildInfo{&#xD;&#xA;	public const string Version = &quot;$(Version)&quot;%3B&#xD;&#xA;	public const string BuildDate = &quot;$(BuildDate)&quot;%3B&#xD;&#xA;	public const string AssemblyName = &quot;$(AssemblyName)&quot;%3B&#xD;&#xA;	public const string Author = &quot;$(Authors)&quot;%3B&#xD;&#xA;}" Overwrite="true" />
+	
+	<ItemGroup>
+      <Compile Include="$(IntermediateOutputPath)BuildInfo.g.cs" />
+    </ItemGroup>
+  </Target>
 </Project>

@@ -15,14 +15,14 @@ class SoundManager : IDisposable{
 	
 	public bool isActive;
 	
-	public SoundManager(){		
+	public SoundManager(){
 		device = ALC.OpenDevice(null);
-		if(device.Handle == 0){
+		if(device.Handle == (IntPtr) 0){
 			throw new Exception("Failed to open a OpenAL device. Try changing openal32.dll");
 		}
 		
 		context = ALC.CreateContext(device, new ALContextAttributes());
-		if(context.Handle == 0){
+		if(context.Handle == (IntPtr) 0){
 			throw new Exception("Failed to create a OpenAL context");
 		}
 		
@@ -123,7 +123,7 @@ class SoundManager : IDisposable{
 			return null;
 		}
 		
-		// Expand source pool
+		//Expand source pool
 		int s = AL.GenSource();
 		sources.Add(s);
 		return s;

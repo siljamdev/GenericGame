@@ -14,5 +14,5 @@ void main()
 {	
 	TexCoord = mix(uv0[gl_InstanceID], uv1[gl_InstanceID], vec2(aPos.x, -aPos.y));
 	
-	gl_Position = projection * vec4((aPos * size[gl_InstanceID]) + pos[gl_InstanceID], -1.0, 1.0);
+	gl_Position = projection * vec4(aPos * size[gl_InstanceID] + pos[gl_InstanceID], -1.0, 1.0);
 }

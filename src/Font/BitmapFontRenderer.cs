@@ -61,6 +61,10 @@ class BitmapFontRenderer : FontRenderer{
 		return l;
 	}
 	
+	public override float getXadvance(char c, Vector2 sca){
+		return sca.Y;
+	}
+	
 	public override float getXsize(string text, Vector2 sca){
 		int[] l = textToMap(text);
 		

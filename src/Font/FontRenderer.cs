@@ -23,8 +23,11 @@ abstract class FontRenderer{
 		fontShader.setMatrix4("projection", m);
 	}
 	
+	public abstract float getXadvance(char c, Vector2 sca);
+	
 	public abstract float getXsize(string text, Vector2 sca);
 	
+	//Placement is anchor point of text, not in the screen
 	public abstract void drawText(string text, Vector2 pos, Vector2 sca, Placement p, Color3 col, float alpha = 1f);
 	
 	public void drawText(string text, float xpos, float ypos, float xsca, float ysca, Placement p, Color3 col, float alpha = 1f){

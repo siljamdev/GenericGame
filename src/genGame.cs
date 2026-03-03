@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.IO;
+using System.Collections.Concurrent;
 using OpenTK;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.Common;
@@ -18,33 +19,31 @@ using AshLib.AshFiles;
 
 using Keys = OpenTK.Windowing.GraphicsLibraryFramework.Keys;
 
-
-partial class GenericGame : GameWindow{
-	
-	public const string version = "1.0.0";
-	
+class GenericGame : GameWindow{
 	#region static
-	public static List<(int, int?, int?)> meshesMarkedForDisposal = new(); //Need to dispose of these on the same thread or else a Fatal error will occur
-	public static List<int> texturesMarkedForDisposal = new(); //Need to dispose of these on the same thread or else a Fatal error will occur
+	public static ConcurrentQueue<IDisposable> resourcesMarkedForDisposal = new(); //Need to disposeOfResources of these on the same thread or else a Fatal error will occur
 	
 	public static DeltaHelper dh;
 	
 	static GLFWCallbacks.ErrorCallback GLFWErrorCallback;
 	
 	static void Main(string[] args){
-		if(OperatingSystem.IsWindows()){
+		#if WINDOWS
 			if(GetConsoleWindow() == IntPtr.Zero){
 				AttachConsole(ATTACH_PARENT_PROCESS);
 			}
-		}
+		#endif
 		
 		GLFWErrorCallback = OnGLFWError;
 		
 		GLFWProvider.SetErrorCallback(GLFWErrorCallback);
 		
+		dh = new DeltaHelper();
+		dh.Start();
+		
 		#if DEBUG
 			using(GenericGame genGame = new GenericGame(new NativeWindowSettings{
-				Title = "Generic Game - v" + version,
+				Title = "Generic Game - v" + BuildInfo.Version,
 				Vsync = VSyncMode.On,
 				ClientSize = new Vector2i(640, 480),
 				Icon = getIcon(),
@@ -86,38 +85,36 @@ partial class GenericGame : GameWindow{
 	#endregion
 	#endregion
 	
-	KeyBind fullscreen = new KeyBind(Keys.F11, false);
-	KeyBind screenshot = new KeyBind(Keys.F2, false);
+	KeyBind fullscreen = new KeyBind(Keys.F11, false).addToConfigurables("keybinds.fullscreen", "Toggle fullscreen");
+	KeyBind screenshot = new KeyBind(Keys.F2, false).addToConfigurables("keybinds.screenshot", "Take screenshot");
 	
-	KeyBind advancedMode = new KeyBind(Keys.LeftAlt, false);
+	KeyBind advancedMode = new KeyBind(Keys.LeftAlt, false).addToConfigurables("keybinds.advancedMode", "Toggle advanced mode");
 	
-	KeyBind moveUp = new KeyBind(Keys.W, true);
-	KeyBind moveDown = new KeyBind(Keys.S, true);
-	KeyBind moveLeft = new KeyBind(Keys.A, true);
-	KeyBind moveRight = new KeyBind(Keys.D, true);
+	KeyBind moveUp = new KeyBind(Keys.W, true).addToConfigurables("keybinds.up", "Move up");
+	KeyBind moveDown = new KeyBind(Keys.S, true).addToConfigurables("keybinds.down", "Move down");
+	KeyBind moveLeft = new KeyBind(Keys.A, true).addToConfigurables("keybinds.left", "Move left");
+	KeyBind moveRight = new KeyBind(Keys.D, true).addToConfigurables("keybinds.right", "Move right");
 	
-	//These dont change
+	//These dont change and arent configurable
 	KeyBind escape = new KeyBind(Keys.Escape, Keys.LeftShift, false);
 	KeyBind help = new KeyBind(Keys.F1, false);
-	KeyBind logUp = new KeyBind(Keys.Up, true);
-	KeyBind logDown = new KeyBind(Keys.Down, true);
+	KeyBind logUp = new KeyBind(Keys.Up, Keys.LeftShift, true);
+	KeyBind logDown = new KeyBind(Keys.Down, Keys.LeftShift, true);
 	
 	public Dependencies dep {get; private set;}
 	public AshFile config;
 	
-	bool takeScreenshotNextTick;
-	
 	public Renderer ren {get; private set;}
-	
-	public Scene sce;
-	
 	public SoundManager sm {get; private set;}
 	
+	public Screens sc {get; private set;}
+	
+	public Scene sce {get; private set;}
+	
+	public bool takeScreenshotNextFrame;
+	public bool isFullscreened => this.WindowState == WindowState.Fullscreen;
+	
 	Sound exampleSound;
-	
-	bool isFullscreened;
-	
-	float maxFps = 144f;
 	
 	#if DEBUG
 		DebugProc DebugMessageDelegate;
@@ -128,9 +125,6 @@ partial class GenericGame : GameWindow{
 	}
 	
 	void initialize(){
-		dh = new DeltaHelper();
-		dh.Start();
-		
 		string appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
 		dep = new Dependencies(appDataPath + "/genGame", true, new string[]{"screenshots"}, null);
 		
@@ -152,16 +146,16 @@ partial class GenericGame : GameWindow{
 		
 		initializeConfig();
 		
-		//Example
-		exampleSound = Sound.monoFromAssembly("res.sounds.gnome.ogg");
-		
 		Scene.initialize();
 		AABB2D.initialize();
 		LineStrip.initialize();
 		
-		initializeScreens();
+		sc = new Screens(this, ren);
 		
-		ren.setScreen(mainMenu);
+		//Load example sound
+		exampleSound = Sound.monoFromAssembly("res.sounds.gnome.ogg");
+		
+		ren.setScreen(sc.mainMenu);
 	}
 	
 	void onResize(int x, int y){
@@ -169,33 +163,36 @@ partial class GenericGame : GameWindow{
 		ren?.updateSize(x, y);
 	}
 	
-	void initializeConfig(){
-		int[] k = new List<Keys>{
-			fullscreen.key,
-			screenshot.key,
-			advancedMode.key,
-			moveUp.key,
-			moveDown.key,
-			moveLeft.key,
-			moveRight.key
-		}.Select(n => (int) n).ToArray();
-		
-		AshFileModel afm = new AshFileModel(
-			new ModelInstance(ModelInstanceOperation.Type, "vsync", true),
-			new ModelInstance(ModelInstanceOperation.Type, "maxFps", 144f),
-			new ModelInstance(ModelInstanceOperation.Type, "controls", k),
-			new ModelInstance(ModelInstanceOperation.Type, "sound", true),
-			new ModelInstance(ModelInstanceOperation.Type, "particles", true)
+	//These appear in options
+	public (string key, object value, string description)[] getConfigurableOptions(){
+		return new (string key, object value, string description)[]{
+			("vsync", true, "Vsync"),
+			("maxFps", 144f, "Maximum FPS"),
+			("sound", true, "Sound"),
+			("particles", true, "Particles")
+		};
+	}
+	
+	//These do not appear in options
+	AshFileModel getNonConfigurableConfigModel(){
+		return new AshFileModel(
+			
 		);
+	}
+	
+	void initializeConfig(){
+		AshFileModel afm = new AshFileModel(getConfigurableOptions().Select(o => new ModelInstance(ModelInstanceOperation.Type, o.key, o.value)).ToArray());
+		afm.Merge(getNonConfigurableConfigModel());
+		afm.Merge(KeyBind.getModel());
 		
 		config = dep.config;
 		
 		afm.deleteNotMentioned = true;
 		
-		config *= afm;
+		config.ApplyModel(afm);
 		
 		//Set current version and path. Might be needed by someone (maybe)
-		config.Set("version", version);
+		config.Set("version", BuildInfo.Version);
 		try{ //Might not work on linux
 			config.Set("path", System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName);
 		}catch{}
@@ -206,39 +203,58 @@ partial class GenericGame : GameWindow{
 		loadControls();
 	}
 	
-	void loadConfig(){
+	public void loadConfig(){
 		setVsync(config.GetValue<bool>("vsync"));
-		maxFps = config.GetValue<float>("maxFps");
+		this.UpdateFrequency = config.GetValue<float>("maxFps");
 		
 		sm.isActive = config.GetValue<bool>("sound");
-		ParticleRenderer.isActive = config.GetValue<bool>("particles");
+		ParticleRenderer.particlesEnabled = config.GetValue<bool>("particles");
+	}
+	
+	//Reset the ones that appear in options
+	public void resetConfig(){
+		AshFileModel r = new AshFileModel(getConfigurableOptions().Select(h => new ModelInstance(ModelInstanceOperation.Value, h.key, h.value)).ToArray());
+		config.ApplyModel(r);
 		
-		this.UpdateFrequency = maxFps;
+		config.Save();
+		
+		loadConfig();
+		
+		ren.setCornerInfo("Reset config", Renderer.selectedTextColor);
 	}
 	
-	void loadControls(){
-		int[] ka = config.GetValue<int[]>("controls");
-		if(ka.Length > 6){
-			fullscreen.key = (Keys)ka[0];
-			screenshot.key = (Keys)ka[1];
-			advancedMode.key = (Keys)ka[2];
-			moveUp.key = (Keys)ka[3];
-			moveDown.key = (Keys)ka[4];
-			moveLeft.key = (Keys)ka[5];
-			moveRight.key = (Keys)ka[6];
+	public void loadControls(){
+		foreach(KeyBind k in KeyBind.configurables){
+			if(config.TryGetValue(k.configKey, out int v)){
+				k.key = (Keys) v;
+			}
 		}
 	}
 	
-	public void setVsync(bool b){
-		if(b){
-			VSync = VSyncMode.On;
-		}else{
-			VSync = VSyncMode.Off;
-		}
+	public void saveControls(){
+		config.ApplyModel(KeyBind.getSaveModel());
+		
+		config.Save();
+		
+		ren.setCornerInfo("Saved controls", Renderer.selectedTextColor);
+	}
+	
+	public void resetControls(){
+		config.ApplyModel(KeyBind.getResetModel());
+		
+		config.Save();
+		
+		loadControls();
+		
+		ren.setCornerInfo("Reset controls", Renderer.selectedTextColor);
+	}
+	
+	void setVsync(bool b){
+		this.VSync = b ? VSyncMode.On : VSyncMode.Off;
 	}
 	
 	void handleKeyboardInput(){
-		// check to see if the window is focused
+		//check to see if the window is focused
 		if(!IsFocused){
 			ren.cam.endFrame();
 			return;
@@ -249,7 +265,7 @@ partial class GenericGame : GameWindow{
 			if(ren.currentScreen != null){
 				ren.closeScreen();
 			}else{
-				ren.setScreen(pauseMenu);
+				ren.setScreen(sc.pauseMenu);
 			}
 			
 			break;
@@ -268,22 +284,39 @@ partial class GenericGame : GameWindow{
 			toggleFullscreen();
 		}
 		
-		if(help.isActive(KeyboardState) && ren.currentScreen != helpMenu){
-			ren.setScreen(helpMenu);
+		if(help.isActive(KeyboardState) && ren.currentScreen != sc.helpMenu){
+			ren.setScreen(sc.helpMenu);
 		}
 		
 		if(advancedMode.isActive(KeyboardState)){
 			ren.toggleAdvancedMode();
 			
-			//Example
+			//Just as an example
 			sm.play(exampleSound);
 		}
 		
-		if(ren.currentScreen != null){			
-			if(logUp.isActive(KeyboardState)){
-				ren.currentScreen.scroll(40f * (float) dh.deltaTime);
-			}else if(logDown.isActive(KeyboardState)){
-				ren.currentScreen.scroll(-40f * (float) dh.deltaTime);
+		if(ren.currentScreen != null){
+			switch(logUp.isActiveMod(KeyboardState)){
+				case 1:
+					ren.currentScreen.scroll(-20f * (float) dh.deltaTime);
+					break;
+				
+				case 2:
+					ren.currentScreen.scroll(-60f * (float) dh.deltaTime);
+					break;
+				
+				default:
+					switch(logDown.isActiveMod(KeyboardState)){
+						case 1:
+							ren.currentScreen.scroll(20f * (float) dh.deltaTime);
+							break;
+						
+						case 2:
+							ren.currentScreen.scroll(60f * (float) dh.deltaTime);
+							break;
+					}
+					break;
+				
 			}
 			ren.cam.endFrame();
 			return;
@@ -308,84 +341,31 @@ partial class GenericGame : GameWindow{
 		ren.cam.endFrame();
 	}
 	
-	void setNewScene(){
+	public void setNewScene(){
 		sce = new Scene(ren);
 		ren.setScreen(null);
 	}
 	
-	void closeScene(){
+	public void closeScene(){
+		sce.Dispose();
 		sce = null;
 		ren.setScreen(null);
-		ren.setScreen(mainMenu);
+		ren.setScreen(sc.mainMenu);
 		ren.cam.reset();
 	}
 	
 	void toggleFullscreen(){
 		VSyncMode t = VSync;
 		if(!isFullscreened){
-			MonitorInfo mi = Monitors.GetMonitorFromWindow(this);
-			WindowState = WindowState.Fullscreen;
-			this.CurrentMonitor = mi;
-			isFullscreened = true;
+			//MonitorInfo mi = Monitors.GetMonitorFromWindow(this);
+			this.WindowState = WindowState.Fullscreen;
+			//this.CurrentMonitor = mi;
+			//MakeFullscreen(mi.Handle);
 			VSync = t;
 		}else{
-			WindowState = WindowState.Normal;
-			isFullscreened = false;
+			this.WindowState = WindowState.Normal;
 			VSync = t;
 		}
-	}
-	
-	#region errors
-	public void checkErrors(){
-		#if !DEBUG
-			OpenTK.Graphics.OpenGL.ErrorCode errorCode = GL.GetError();
-			while(errorCode != OpenTK.Graphics.OpenGL.ErrorCode.NoError){
-				Console.Error.WriteLine("[OpenGL Error] " + errorCode);
-				if(ren != null){
-					ren.setCornerInfo("[OpenGL Error] " + errorCode, Renderer.redTextColor);
-				}
-				
-				errorCode = GL.GetError();
-			}
-		#endif
-		sm.checkErrors();
-	}
-	
-	#if DEBUG
-		void OnDebugMessage(
-			DebugSource source,     // Source of the debugging message.
-			DebugType type,         // Type of the debugging message.
-			int id,                 // ID associated with the message.
-			DebugSeverity severity, // Severity of the message.
-			int length,             // Length of the string in pMessage.
-			IntPtr pMessage,        // Pointer to message string.
-			IntPtr pUserParam)      // The pointer you gave to OpenGL, explained later.
-		{
-			// In order to access the string pointed to by pMessage, you can use Marshal
-			// class to copy its contents to a C# string without unsafe code. You can
-			// also use the new function Marshal.PtrToStringUTF8 since .NET Core 1.1.
-			string message = Marshal.PtrToStringUTF8(pMessage, length);
-			
-			Console.Error.WriteLine("[OpenGL Error] Severity: " + severity + " Source: " + source + " Type: " + type + " Id: " + id + " Message: " + message);
-			//Console.Error.WriteLine("[{0} source={1} type={2} id={3}] {4}", severity, source, type, id, message);
-			
-			if(ren != null){
-				ren.setCornerInfo("[OpenGL Error] " + source, Renderer.redTextColor);
-			}
-		}
-	#endif
-	#endregion
-	
-	void dispose(){
-		foreach((int VAO, int? VBO, int? EBO) in meshesMarkedForDisposal){		
-			Mesh.cleanup(VAO, VBO, EBO);
-		}
-		meshesMarkedForDisposal.Clear();
-		
-		foreach(int tid in texturesMarkedForDisposal){		
-			Texture2D.cleanup(tid);
-		}
-		texturesMarkedForDisposal.Clear();
 	}
 	
 	void captureScreenshot(){
@@ -412,8 +392,47 @@ partial class GenericGame : GameWindow{
 		
 		// Write PNG using StbImageWriteSharp
 		var writer = new StbImageWriteSharp.ImageWriter();
-		using (var stream = File.OpenWrite(dep.path + "/screenshots/" + DateTime.Now.ToString("dd-MM-yyyy_HH-mm-ss") + ".png")){
+		using (var stream = File.OpenWrite(dep.path + "/screenshots/" + DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss") + ".png")){
 			writer.WritePng(rgbPixels, width, height, StbImageWriteSharp.ColorComponents.RedGreenBlue, stream);
+		}
+	}
+	
+	#region errors
+	public void checkErrors(){
+		#if !DEBUG
+			OpenTK.Graphics.OpenGL.ErrorCode errorCode = GL.GetError();
+			while(errorCode != OpenTK.Graphics.OpenGL.ErrorCode.NoError){
+				Console.Error.WriteLine("[OpenGL Error] " + errorCode);
+				ren?.setCornerInfo("[OpenGL Error] " + errorCode, Renderer.redTextColor);
+				
+				errorCode = GL.GetError();
+			}
+		#endif
+		sm.checkErrors();
+	}
+	
+	#if DEBUG
+		void OnDebugMessage(
+			DebugSource source,     //Source of the debugging message.
+			DebugType type,         //Type of the debugging message.
+			int id,                 //ID associated with the message.
+			DebugSeverity severity, //Severity of the message.
+			int length,             //Length of the string in pMessage.
+			IntPtr pMessage,        //Pointer to message string.
+			IntPtr pUserParam)      //The pointer you gave to OpenGL, explained later.
+		{
+			string message = Marshal.PtrToStringUTF8(pMessage, length);
+			
+			Console.Error.WriteLine("[OpenGL Error] Severity: " + severity + ", Source: " + source + ", Type: " + type + ", Id: " + id + ", Message: " + message);
+			
+			ren?.setCornerInfo("[GL Error] " + source, Renderer.redTextColor);
+		}
+	#endif
+	#endregion
+	
+	void disposeOfResources(){
+		while(resourcesMarkedForDisposal.TryDequeue(out IDisposable r)){
+			r.Dispose();
 		}
 	}
 	
@@ -444,7 +463,7 @@ partial class GenericGame : GameWindow{
 	}
 	
 	protected override void OnUnload(){
-		dispose();
+		disposeOfResources();
 		base.OnUnload();
 	}
 	
@@ -462,17 +481,14 @@ partial class GenericGame : GameWindow{
 		ren.draw();
 		Context.SwapBuffers();
 		checkErrors();
-		dispose();
-		if(takeScreenshotNextTick){
+		disposeOfResources();
+		if(takeScreenshotNextFrame){
+			takeScreenshotNextFrame = false;
 			captureScreenshot();
 			ren.setCornerInfo("Saved screenshot");
-			takeScreenshotNextTick = false;
 		}
 		base.OnRenderFrame(args);
 		dh.Frame();
-		/* if(VSync != VSyncMode.On){
-			dh.Target(maxFps);
-		} */
 	}
 	
 	protected override void OnMouseWheel(MouseWheelEventArgs args){
@@ -510,15 +526,15 @@ partial class GenericGame : GameWindow{
 		base.OnMouseDown(e);
     }
 	
-	#region WINDOWS
-	[DllImport("user32.dll", CharSet = CharSet.Unicode)]
-	private static extern int MessageBox(IntPtr hWnd, string text, string caption, uint type);
-	
-	[DllImport("kernel32.dll")]
-	static extern bool AttachConsole(int dwProcessId);
-	const int ATTACH_PARENT_PROCESS = -1;
-	
-	[DllImport("kernel32.dll")]
-	static extern IntPtr GetConsoleWindow();
-	#endregion
+	#if WINDOWS
+		[DllImport("user32.dll", CharSet = CharSet.Unicode)]
+		private static extern int MessageBox(IntPtr hWnd, string text, string caption, uint type);
+		
+		[DllImport("kernel32.dll")]
+		static extern bool AttachConsole(int dwProcessId);
+		const int ATTACH_PARENT_PROCESS = -1;
+		
+		[DllImport("kernel32.dll")]
+		static extern IntPtr GetConsoleWindow();
+	#endif
 }

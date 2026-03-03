@@ -258,15 +258,17 @@ public class Shader : IDisposable{
 		GL.Uniform2(uniforms[name], data.X, data.Y);
 	}
 	
+	//ONLY call in main thread
 	public void Dispose(){
 		if(activeShader == this.id){
 			activeShader = 0;
 		}
 		GL.DeleteProgram(this.id);
+		
 		GC.SuppressFinalize(this);
 	}
 	
 	~Shader(){
-		Dispose();
+		GenericGame.resourcesMarkedForDisposal.Enqueue(this);
 	}
 }

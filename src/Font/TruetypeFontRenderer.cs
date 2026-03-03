@@ -27,46 +27,73 @@ class TruetypeFontRenderer : FontRenderer{
 		
 		List<TextInstance> instances = new List<TextInstance>(text.Length);
 	
-		float penX = 0;
-		float penY = 0;
+		float penX = 0f;
+		float penY = 0f;
 		
+		//Actual scale, corrected
 		Vector2 actS = scale + new Vector2(increasedSize);
 	
 		foreach (char c in text){
-			if(!map.TryGetValue(c, out var g)){
-				continue; // skip unknown glyphs
+			if(!map.TryGetValue(c, out GlyphInfo g)){
+				continue; //skip unknown glyphs
 			}
 	
-			// Compute glyph quad position
+			//Compute glyph quad position
 			float gx = penX + g.bearing.X * actS.X;
 			float gy = penY - g.bearing.Y * actS.Y - scale.Y;
 	
 			TextInstance ti = new TextInstance(
-				new Vector2(gx, gy),
-				new Vector2(g.size.X * actS.X, g.size.Y * actS.Y),
+				new Vector2(gx, gy), //pos
+				new Vector2(g.size.X * actS.X, g.size.Y * actS.Y), //size
 				g.uv0,
 				g.uv1
 			);
 	
 			instances.Add(ti);
 	
-			// Advance pen
+			//Advance pen
 			penX += g.advance * actS.X;
 		}
 	
 		return instances.ToArray();
 	}
 	
+	public override float getXadvance(char c, Vector2 sca){
+		if(map.TryGetValue(c, out GlyphInfo g)){
+			return g.advance * (sca.X + increasedSize);
+		}else{
+			return 0f;
+		}
+	}
+	
 	public override float getXsize(string text, Vector2 sca){
-		TextInstance[] l = textToVert(text, sca);
+		text = text.Length <= maxChars ? text : text.Substring(0, maxChars);
 		
-		return l.Length > 0 ? l[l.Length - 1].pos.X + l[l.Length - 1].size.X : 0f;
+		float penX = 0f;
+		
+		float posXPlusSizeX = 0f;
+		
+		//Actual scale, corrected
+		Vector2 actS = sca + new Vector2(increasedSize);
+		
+		foreach(char c in text){
+			if(!map.TryGetValue(c, out GlyphInfo g)){
+				continue; //skip unknown glyphs
+			}
+			
+			posXPlusSizeX = penX + g.bearing.X * actS.X + g.size.X * actS.X;
+			
+			//Advance pen
+			penX += g.advance * actS.X;
+		}
+		
+		return posXPlusSizeX;
 	}
 	
 	public override void drawText(string text, Vector2 pos, Vector2 sca, Placement p, Color3 col, float alpha = 1f){
 		TextInstance[] l = textToVert(text, sca);
 		
-		float totalSize = l.Length > 0 ? l[l.Length - 1].pos.X + l[l.Length - 1].size.X : 0f;
+		float totalSize = l.Length > 0 ? (l[l.Length - 1].pos.X + l[l.Length - 1].size.X) : 0f;
 		
 		pos = getPos(pos, sca.Y, totalSize, p);
 		

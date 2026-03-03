@@ -6,7 +6,7 @@ using OpenTK.Mathematics;
 class ParticleRenderer{
 	static protected Random rand = new Random();
 	
-	public static bool isActive = true;
+	public static bool particlesEnabled = true;
 	
 	List<Particle> pars;
 	
@@ -15,7 +15,7 @@ class ParticleRenderer{
 	}
 	
 	public void add(Particle p){
-		if(!isActive){
+		if(!particlesEnabled){
 			return;
 		}
 		
@@ -23,7 +23,7 @@ class ParticleRenderer{
 	}
 	
 	public void addMultiple(Vector2 center, float range, int count, Func<Particle> factory){
-		if(!isActive){
+		if(!particlesEnabled){
 			return;
 		}
 		
@@ -44,7 +44,7 @@ class ParticleRenderer{
 	}
 	
 	public void draw(Renderer ren){
-		if(!isActive){
+		if(!particlesEnabled){
 			return;
 		}
 		

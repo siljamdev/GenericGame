@@ -3,7 +3,7 @@ using OpenTK;
 using OpenTK.Graphics.OpenGL;
 using OpenTK.Mathematics;
 
-class Scene{	
+class Scene : IDisposable{	
 	static Shader sceneShader;
 	static Mesh sceneMesh;
 	
@@ -51,5 +51,9 @@ class Scene{
 		ren.iconTex.bind();
 		
 		sceneMesh.draw();
+	}
+	
+	public void Dispose(){
+		cam.onViewChange -= setView;
 	}
 }
