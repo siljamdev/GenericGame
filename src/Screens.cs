@@ -48,113 +48,136 @@ class Screens{
 					"We will come and help you"
 		));
 		
-		UiCheck vsync = new UiCheck(Placement.Center, 0f, -1f * Renderer.separation, Renderer.textSize.Y + 10f, Renderer.textSize.Y + 10f, "Vsync:", config.GetValue<bool>("vsync"));
-		UiField maxFpsF = new UiField(Placement.Center, 0f, 0f, 30f, "Max FPS:", genGame.UpdateFrequency.ToString(), 6, WritingType.FloatPositive);
-		UiCheck sound = new UiCheck(Placement.Center, 0f, 1f * Renderer.separation, Renderer.textSize.Y + 10f, Renderer.textSize.Y + 10f, "Sound:", config.GetValue<bool>("sound"));
-		UiCheck particles = new UiCheck(Placement.Center, 0f, 2f * Renderer.separation, Renderer.textSize.Y + 10f, Renderer.textSize.Y + 10f, "Particles:", config.GetValue<bool>("particles"));
 		
 		(string key, object value, string description)[] options = genGame.getConfigurableOptions();
+		List<UiElement> optionsFields = new(options.Length);
 		
 		const int optionsPerPage = 6;
 		optionsPages = new UiScreen[(int) Math.Ceiling(options.Length / (float) optionsPerPage)];
 		
 		UiText optionsErrorText = new UiText(Placement.BottomCenter, 0f, 180f, "").setColor(Renderer.redTextColor);
 		
-		int j = 0;
-		foreach(var ka in options.Chunk(optionsPerPage)){
-			List<UiElement> optionsElements = new(6);
-			optionsElements.Add(new UiText(Placement.TopCenter, 0f, 20f, "Options - " + (j + 1)).setColor(Renderer.titleTextColor));
+		//Helper
+		void saveOptions(){
+			bool hasError = false;
 			
-			int i = -4;
-			foreach((string key, object value, string description) in ka){
+			int i = 0;
+			foreach((string key, object value, string description) in options){
 				if(value is bool){
-					optionsElements.Add(new UiCheck(Placement.Center, 0f, i * Renderer.separation, Renderer.textSize.Y + 10f, Renderer.textSize.Y + 10f, description + ":", config.GetValue<bool>(key)));
+					config.Set(key, ((UiCheck) optionsFields[i]).isChecked);
 				}else if(value is string){
-					optionsElements.Add(new UiField(Placement.Center, 0f, i * Renderer.separation, 100f, description + ":", config.GetValue<string>(key), 16, WritingType.String));
+					config.Set(key, ((UiField) optionsFields[i]).text);
 				}else if(value is float){
-					optionsElements.Add(new UiField(Placement.Center, 0f, i * Renderer.separation, 30f, description + ":", config.GetValue<float>(key).ToString(), 6, WritingType.FloatPositive));
+					if(float.TryParse(((UiField) optionsFields[i]).text, out float f)){
+						config.Set(key, f);
+					}else{
+						optionsErrorText.setText("Invalid float: " + description);
+						hasError = true;
+					}
 				}else if(value is int){
-					optionsElements.Add(new UiField(Placement.Center, 0f, i * Renderer.separation, 30f, description + ":", config.GetValue<int>(key).ToString(), 4, WritingType.Int));
+					if(int.TryParse(((UiField) optionsFields[i]).text, out int f)){
+						config.Set(key, f);
+					}else{
+						optionsErrorText.setText("Invalid int: " + description);
+						hasError = true;
+					}
 				}else if(value is Color3){
-					optionsElements.Add(new UiField(Placement.Center, 0f, i * Renderer.separation, 60f, description + ":", config.GetValue<Color3>(key).ToString(), 7, WritingType.Hex));
-				}else{
-					continue;
+					if(Color3.TryParse(((UiField) optionsFields[i]).text, out Color3 f)){
+						config.Set(key, f);
+					}else{
+						optionsErrorText.setText("Invalid color: " + description);
+						hasError = true;
+					}
 				}
 				
 				i++;
 			}
 			
-			int s = j;
+			if(!hasError){
+				optionsErrorText.setText("");
+				config.Save();
+				genGame.loadConfig();
+				
+				ren.setCornerInfo("Config saved", Renderer.selectedTextColor);
+			}
+		}
+		
+		//Helper
+		void resetOptions(){
+			genGame.resetConfig();
 			
-			optionsElements.Add(new UiImageButton(Placement.BottomLeft, 0f, 0f, 35f, 35f, "file").setAction(() => {
+			int i = 0;
+			foreach((string key, object value, string description) in options){
+				if(value is bool){
+					((UiCheck) optionsFields[i]).isChecked = config.GetValue<bool>(key);
+				}else if(value is string){
+					((UiField) optionsFields[i]).setText(config.GetValue<string>(key));
+				}else if(value is float){
+					((UiField) optionsFields[i]).setText(config.GetValue<float>(key).ToString());
+				}else if(value is int){
+					((UiField) optionsFields[i]).setText(config.GetValue<int>(key).ToString());
+				}else if(value is Color3){
+					((UiField) optionsFields[i]).setText(config.GetValue<Color3>(key).ToString());
+				}
+				
+				i++;
+			}
+		}
+		
+		int j = 0;
+		foreach(var ka in options.Chunk(optionsPerPage)){
+			List<UiElement> pageElements = new(6);
+			pageElements.Add(new UiText(Placement.TopCenter, 0f, 20f, "Options - " + (j + 1)).setColor(Renderer.titleTextColor));
+			
+			int i = -4;
+			foreach((string key, object value, string description) in ka){
+				if(value is bool){
+					pageElements.Add(new UiCheck(Placement.Center, 0f, i * Renderer.separation, Renderer.textSize.Y + 10f, Renderer.textSize.Y + 10f, description + ":", config.GetValue<bool>(key)));
+				}else if(value is string){
+					pageElements.Add(new UiField(Placement.Center, 0f, i * Renderer.separation, 100f, description + ":", config.GetValue<string>(key), 16, WritingType.String));
+				}else if(value is float){
+					pageElements.Add(new UiField(Placement.Center, 0f, i * Renderer.separation, 30f, description + ":", config.GetValue<float>(key).ToString(), 6, WritingType.FloatPositive));
+				}else if(value is int){
+					pageElements.Add(new UiField(Placement.Center, 0f, i * Renderer.separation, 30f, description + ":", config.GetValue<int>(key).ToString(), 4, WritingType.Int));
+				}else if(value is Color3){
+					pageElements.Add(new UiField(Placement.Center, 0f, i * Renderer.separation, 60f, description + ":", config.GetValue<Color3>(key).ToString(), 7, WritingType.Hex));
+				}else{
+					optionsFields.Add(null);
+					continue;
+				}
+				
+				optionsFields.Add(pageElements.Last());
+				
+				i++;
+			}
+			
+			int s = j; //For lambdas, j cant be used, because a reference to the changing varible is kept
+			
+			pageElements.Add(new UiImageButton(Placement.BottomLeft, 0f, 0f, 35f, 35f, "file").setAction(() => {
 				openFolder(genGame.dep.path);
 			}).setDescription("Open data directory"));
 			
-			optionsElements.Add(new UiButton(Placement.BottomCenter, 0f, 3f * Renderer.separation, 300f, "Controls").setAction(() => ren.setScreen(controlsPages[0])));
-			optionsElements.Add(new UiButton(Placement.BottomCenter, -79f, 2f * Renderer.separation, 142f, "Save").setColor(Renderer.greenButtonColor).setAction(() => {
-				bool hasError = false;
-				
-				int i = 1;
-				foreach((string key, object value, string description) in ka){
-					if(value is bool){
-						config.Set(key, ((UiCheck) optionsElements[i]).isChecked);
-					}else if(value is string){
-						config.Set(key, ((UiField) optionsElements[i]).text);
-					}else if(value is float){
-						if(float.TryParse(((UiField) optionsElements[i]).text, out float f)){
-							config.Set(key, f);
-						}else{
-							optionsPages[s].showError("Invalid float: " + description);
-							hasError = true;
-						}
-					}else if(value is int){
-						if(int.TryParse(((UiField) optionsElements[i]).text, out int f)){
-							config.Set(key, f);
-						}else{
-							optionsPages[s].showError("Invalid int: " + description);
-							hasError = true;
-						}
-					}else if(value is Color3){
-						if(Color3.TryParse(((UiField) optionsElements[i]).text, out Color3 f)){
-							config.Set(key, f);
-						}else{
-							optionsPages[s].showError("Invalid color: " + description);
-							hasError = true;
-						}
-					}else{
-						continue;
-					}
-					
-					i++;
-				}
-				
-				if(!hasError){
-					optionsPages[s].showError("");
-					config.Save();
-					genGame.loadConfig();
-					
-					ren.setCornerInfo("Config saved", Renderer.selectedTextColor);
-				}
-			}));
-			optionsElements.Add(new UiButton(Placement.BottomCenter, 79f, 2f * Renderer.separation, 142f, "Reset").setAction(genGame.resetConfig));
-			optionsElements.Add(new UiButton(Placement.BottomCenter, 0f, 1f * Renderer.separation, 300f, "Close").setColor(Renderer.redButtonColor).setAction(ren.closeScreen));
+			pageElements.Add(new UiButton(Placement.BottomCenter, 0f, 3f * Renderer.separation, 300f, "Controls").setAction(() => ren.setScreen(controlsPages[0])));
+			pageElements.Add(new UiButton(Placement.BottomCenter, -79f, 2f * Renderer.separation, 142f, "Save").setColor(Renderer.greenButtonColor).setAction(saveOptions));
+			pageElements.Add(new UiButton(Placement.BottomCenter, 79f, 2f * Renderer.separation, 142f, "Reset").setAction(resetOptions));
+			pageElements.Add(new UiButton(Placement.BottomCenter, 0f, 1f * Renderer.separation, 300f, "Close").setColor(Renderer.redButtonColor).setAction(ren.closeScreen));
 			
 			if(j > 0){
-				optionsElements.Add(new UiImageButton(Placement.CenterLeft, 10f, 0f, 45f, 45f, "previous").setAction(() => {
+				pageElements.Add(new UiImageButton(Placement.CenterLeft, 10f, 0f, 45f, 45f, "previous").setAction(() => {
 					ren.closeScreen();
 					ren.setScreen(optionsPages[s - 1]);
 				}));
 			}
 			
 			if(j < optionsPages.Length - 1){
-				optionsElements.Add(new UiImageButton(Placement.CenterRight, 10f, 0f, 45f, 45f, "next").setAction(() => {
+				pageElements.Add(new UiImageButton(Placement.CenterRight, 10f, 0f, 45f, 45f, "next").setAction(() => {
 					ren.closeScreen();
 					ren.setScreen(optionsPages[s + 1]);
 				}));
 			}
 			
 			optionsPages[j] = new UiScreen(
-				optionsElements.ToArray()
+				pageElements.ToArray()
 			).addErrorText(optionsErrorText);
 			
 			j++;

@@ -54,14 +54,21 @@ class UiKeyField : UiSelectable{
 		Vector2 fsize = new Vector2(ren.fr.getXsize(text, Renderer.textSize) + 10f, Renderer.textSize.Y + 10f);
 		
 		if(box != null && box % mousePos){
-			ren.drawRect(pos + new Vector2(qXsize + 10f, 0f), fsize, hoverFieldColor, 0.8f);
-			ren.fr.drawText(text, pos + new Vector2(qXsize + 15f, -5f), Renderer.textSize, hoverTextColor, 1f);
-		}else if(selected){
-			ren.drawRect(pos + new Vector2(qXsize + 10f, 0f), fsize, selectedFieldColor, 0.8f);
-			ren.fr.drawText(text, pos + new Vector2(qXsize + 15f, -5f), Renderer.textSize, selectedTextColor, 1f);
+			if(selected){
+				ren.drawRect(pos + new Vector2(qXsize + 10f, 0f), fsize, selectedFieldColor, 0.8f);
+				ren.fr.drawText(text, pos + new Vector2(qXsize + 15f, -5f), Renderer.textSize, hoverTextColor, 1f);
+			}else{
+				ren.drawRect(pos + new Vector2(qXsize + 10f, 0f), fsize, hoverFieldColor, 0.8f);
+				ren.fr.drawText(text, pos + new Vector2(qXsize + 15f, -5f), Renderer.textSize, hoverTextColor, 1f);
+			}
 		}else{
-			ren.drawRect(pos + new Vector2(qXsize + 10f, 0f), fsize, fieldColor, 0.7f);
-			ren.fr.drawText(text, pos + new Vector2(qXsize + 15f, -5f), Renderer.textSize, textColor, 1f);
+			if(selected){
+				ren.drawRect(pos + new Vector2(qXsize + 10f, 0f), fsize, selectedFieldColor, 0.8f);
+				ren.fr.drawText(text, pos + new Vector2(qXsize + 15f, -5f), Renderer.textSize, selectedTextColor, 1f);
+			}else{
+				ren.drawRect(pos + new Vector2(qXsize + 10f, 0f), fsize, fieldColor, 0.7f);
+				ren.fr.drawText(text, pos + new Vector2(qXsize + 15f, -5f), Renderer.textSize, textColor, 1f);
+			}
 		}
 		ren.fr.drawText(question, pos + new Vector2(0f, -5f), Renderer.textSize, questionColor, 1f);
 	}

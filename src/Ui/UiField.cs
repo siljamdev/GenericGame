@@ -58,6 +58,12 @@ class UiField : UiSelectable{
 		return this;
 	}
 	
+	public UiField setText(string t){
+		text = t.Length > maxChars ? t.Substring(0, maxChars) : t;
+		needsToUpdate = true;
+		return this;
+	}
+	
 	public bool addStr(string s){
 		if(text.Length + s.Length > maxChars){
 			return false;
@@ -111,14 +117,21 @@ class UiField : UiSelectable{
 		Vector2 fsize = new Vector2(fXsize, Renderer.textSize.Y + 10f);
 		
 		if(box != null && box % mousePos){
-			ren.drawRect(pos + new Vector2(qXsize + 10f, 0f), fsize, hoverFieldColor, 0.8f);
-			ren.fr.drawText(text, pos + new Vector2(qXsize + 15f, -5f), Renderer.textSize, hoverTextColor, 1f);
-		}else if(selected){
-			ren.drawRect(pos + new Vector2(qXsize + 10f, 0f), fsize, selectedFieldColor, 0.8f);
-			ren.fr.drawText(text, pos + new Vector2(qXsize + 15f, -5f), Renderer.textSize, selectedTextColor, 1f);
+			if(selected){
+				ren.drawRect(pos + new Vector2(qXsize + 10f, 0f), fsize, selectedFieldColor, 0.8f);
+				ren.fr.drawText(text, pos + new Vector2(qXsize + 15f, -5f), Renderer.textSize, hoverTextColor, 1f);
+			}else{
+				ren.drawRect(pos + new Vector2(qXsize + 10f, 0f), fsize, hoverFieldColor, 0.8f);
+				ren.fr.drawText(text, pos + new Vector2(qXsize + 15f, -5f), Renderer.textSize, hoverTextColor, 1f);
+			}
 		}else{
-			ren.drawRect(pos + new Vector2(qXsize + 10f, 0f), fsize, fieldColor, 0.7f);
-			ren.fr.drawText(text, pos + new Vector2(qXsize + 15f, -5f), Renderer.textSize, textColor, 1f);
+			if(selected){
+				ren.drawRect(pos + new Vector2(qXsize + 10f, 0f), fsize, selectedFieldColor, 0.8f);
+				ren.fr.drawText(text, pos + new Vector2(qXsize + 15f, -5f), Renderer.textSize, selectedTextColor, 1f);
+			}else{
+				ren.drawRect(pos + new Vector2(qXsize + 10f, 0f), fsize, fieldColor, 0.7f);
+				ren.fr.drawText(text, pos + new Vector2(qXsize + 15f, -5f), Renderer.textSize, textColor, 1f);
+			}
 		}
 		
 		ren.fr.drawText(question, pos + new Vector2(0f, -5f), Renderer.textSize, questionColor, 1f);
