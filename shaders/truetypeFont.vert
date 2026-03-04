@@ -12,7 +12,7 @@ uniform mat4 projection;
 
 void main()
 {	
-	TexCoord = mix(uv0[gl_InstanceID], uv1[gl_InstanceID], vec2(aPos.x, -aPos.y));
+	TexCoord = mix(uv0[gl_InstanceID], uv1[gl_InstanceID], vec2(aPos.x, -aPos.y)); //Reverse in y because vertices are from -1 to 0
 	
 	gl_Position = projection * vec4(aPos * size[gl_InstanceID] + pos[gl_InstanceID], -1.0, 1.0);
 }
