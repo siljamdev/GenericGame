@@ -98,7 +98,7 @@ class Screens{
 				config.Save();
 				genGame.loadConfig();
 				
-				ren.setCornerInfo("Config saved", Renderer.selectedTextColor);
+				ren.setCornerInfo("Saved config", Renderer.selectedTextColor);
 			}
 		}
 		

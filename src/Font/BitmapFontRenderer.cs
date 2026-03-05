@@ -68,11 +68,10 @@ class BitmapFontRenderer : FontRenderer{
 	public override float getXsize(string text, Vector2 sca){
 		int[] l = textToMap(text);
 		
-		return l.Length * sca.Y;
+		return l.Length * sca.X;
 	}
 	
 	public override void drawText(string text, Vector2 pos, Vector2 sca, Placement p, Color3 col, float alpha = 1f){
-		
 		int[] l = textToMap(text);
 		
 		float totalSize = l.Length * sca.X;

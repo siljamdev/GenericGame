@@ -347,7 +347,7 @@ class GenericGame : GameWindow{
 	}
 	
 	public void closeScene(){
-		sce.Dispose();
+		sce?.Dispose();
 		sce = null;
 		ren.setScreen(null);
 		ren.setScreen(sc.mainMenu);
